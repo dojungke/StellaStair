@@ -1,0 +1,6 @@
+{
+  "name": "StellaStair.Runtime",
+  "rootNamespace": "StellaStair",
+  "references": ["Unity.InputSystem", "Unity.ugui", "Unity.TextMeshPro"],
+  "autoReferenced": true
+}

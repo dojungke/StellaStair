@@ -1,0 +1,491 @@
+using System;
+using System.Collections.Generic;
+using StellaStair.Units;
+using UnityEngine;
+using UnityEngine.Tilemaps;
+
+namespace StellaStair.Grid
+{
+    public enum KnockbackLandingType { Landing, Collision, Void }
+
+    public sealed class TacticalBoard : MonoBehaviour
+    {
+        [SerializeField] private UnityEngine.Grid grid;
+        [SerializeField] private Tilemap walkableTilemap;
+        [SerializeField] private Tilemap playerDeploymentTilemap;
+        [SerializeField] private Tilemap ladderTilemap;
+        [SerializeField, Min(0)] private int maximumStepUp = 1;
+        [SerializeField, Min(0)] private int maximumDrop = 2;
+
+        private readonly Dictionary<GridPosition, TacticalUnit> occupants = new();
+        private static readonly int[] HorizontalDirections = { -1, 1 };
+
+        public event Action OccupancyChanged;
+
+        public UnityEngine.Grid Grid => grid;
+        public Tilemap WalkableTilemap => walkableTilemap;
+        public Tilemap LadderTilemap => ladderTilemap;
+
+        private void Awake()
+        {
+            if (grid == null || walkableTilemap == null)
+                throw new InvalidOperationException($"{name}: Grid와 Walkable Tilemap을 연결해야 합니다.");
+        }
+
+        public void Configure(UnityEngine.Grid targetGrid, Tilemap walkable, Tilemap deployment)
+        {
+            grid = targetGrid;
+            walkableTilemap = walkable;
+            playerDeploymentTilemap = deployment;
+        }
+
+        public void ConfigureLadder(Tilemap ladders) => ladderTilemap = ladders;
+
+        public GridPosition WorldToPosition(Vector3 world) => GridPosition.From(grid.WorldToCell(world));
+
+        public GridPosition StandingWorldToPosition(Vector3 world)
+        {
+            var standingCell = grid.WorldToCell(world);
+            return new GridPosition(standingCell.x, standingCell.y - 1);
+        }
+
+        public Vector3 PositionToWorld(GridPosition position) =>
+            grid.GetCellCenterWorld(position.ToVector3Int());
+
+        public Vector3 PositionToStandingWorld(GridPosition position) =>
+            PositionToWorld(position) + Vector3.up * grid.cellSize.y;
+
+        public bool IsWalkable(GridPosition position) =>
+            walkableTilemap.HasTile(position.ToVector3Int());
+
+        public bool IsPlayerDeploymentCell(GridPosition position) =>
+            playerDeploymentTilemap != null && playerDeploymentTilemap.HasTile(position.ToVector3Int());
+
+        public IEnumerable<GridPosition> GetPlayerDeploymentCells()
+        {
+            if (playerDeploymentTilemap == null)
+                yield break;
+
+            foreach (var cell in playerDeploymentTilemap.cellBounds.allPositionsWithin)
+            {
+                if (playerDeploymentTilemap.HasTile(cell))
+                    yield return GridPosition.From(cell);
+            }
+        }
+
+        public IEnumerable<GridPosition> GetCellsInAttackRange(
+            GridPosition center, int horizontalRange, int verticalRange)
+        {
+            if (horizontalRange < 1 || verticalRange < 0)
+                yield break;
+
+            for (var x = center.X - horizontalRange; x <= center.X + horizontalRange; x++)
+            {
+                for (var y = center.Y - verticalRange; y <= center.Y + verticalRange; y++)
+                {
+                    var position = new GridPosition(x, y);
+
+                    if (position != center)
+                        yield return position;
+                }
+            }
+        }
+
+        public bool TryGetOccupant(GridPosition position, out TacticalUnit unit) =>
+            occupants.TryGetValue(position, out unit);
+
+        public bool HasUnitBetween(GridPosition start, GridPosition target, TacticalUnit ignoredUnit = null)
+        {
+            var deltaX = target.X - start.X;
+            var deltaY = target.Y - start.Y;
+            var steps = Mathf.Max(Mathf.Abs(deltaX), Mathf.Abs(deltaY));
+
+            if (steps <= 1)
+                return false;
+
+            var visited = new HashSet<GridPosition>();
+
+            for (var i = 1; i < steps; i++)
+            {
+                var t = (float)i / steps;
+
+                var position = new GridPosition(
+                    Mathf.RoundToInt(Mathf.Lerp(start.X, target.X, t)),
+                    Mathf.RoundToInt(Mathf.Lerp(start.Y, target.Y, t)));
+
+                if (!visited.Add(position))
+                    continue;
+
+                if (TryGetOccupant(position, out var occupant) && occupant != null &&
+                    occupant != ignoredUnit && occupant.IsAlive)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public IEnumerable<TacticalUnit> GetOccupantsInRange(GridPosition center, int range)
+        {
+            if (range < 1)
+                yield break;
+
+            foreach (var pair in occupants)
+            {
+                if (pair.Value != null && pair.Value.IsAlive &&
+                    pair.Key != center && pair.Key.ManhattanDistance(center) <= range)
+                    yield return pair.Value;
+            }
+        }
+
+        public bool HasUnitsResolvingForcedMovement()
+        {
+            foreach (var unit in occupants.Values)
+            {
+                if (unit != null && unit.IsResolvingForcedMovement)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool CanEnter(GridPosition position, TacticalUnit mover = null)
+        {
+            return IsWalkable(position) &&
+                   (!occupants.TryGetValue(position, out var occupant) || occupant == mover);
+        }
+
+        public IEnumerable<GridPosition> GetNeighbors(
+            GridPosition position, TacticalUnit mover = null, bool allowOccupiedTraversal = false)
+        {
+            foreach (var direction in HorizontalDirections)
+            {
+                var targetX = position.X + direction;
+
+                // 가장 높은 유효 표면을 먼저 선택한다.
+                // 같은 x에서 수직으로 올라가는 경로를 만들지 않아 단차 타일을 관통하지 않는다.
+                for (var y = position.Y + maximumStepUp; y >= position.Y - maximumDrop; y--)
+                {
+                    var candidate = new GridPosition(targetX, y);
+
+                    if (!IsSurface(candidate) || !allowOccupiedTraversal && !CanEnter(candidate, mover))
+                        continue;
+
+                    yield return candidate;
+                    break;
+                }
+            }
+
+            foreach (var ladderDestination in GetLadderDestinations(position, mover, allowOccupiedTraversal))
+                yield return ladderDestination;
+        }
+
+        private IEnumerable<GridPosition> GetLadderDestinations(
+            GridPosition position, TacticalUnit mover, bool allowOccupiedTraversal)
+        {
+            if (ladderTilemap == null)
+                yield break;
+
+            var connectedLadders = new HashSet<Vector3Int>();
+            var frontier = new Queue<Vector3Int>();
+
+            for (var xOffset = -1; xOffset <= 1; xOffset++)
+            {
+                for (var yOffset = 0; yOffset <= 1; yOffset++)
+                {
+                    var ladderCell = new Vector3Int(
+                        position.X + xOffset,
+                        position.Y + yOffset,
+                        0);
+
+                    if (ladderTilemap.HasTile(ladderCell) && connectedLadders.Add(ladderCell))
+                        frontier.Enqueue(ladderCell);
+                }
+            }
+
+            if (frontier.Count == 0)
+                yield break;
+
+            var directions = new[]
+            {
+                Vector3Int.left,
+                Vector3Int.right,
+                Vector3Int.up,
+                Vector3Int.down
+            };
+
+            while (frontier.Count > 0)
+            {
+                var current = frontier.Dequeue();
+
+                foreach (var direction in directions)
+                {
+                    var next = current + direction;
+
+                    if (ladderTilemap.HasTile(next) && connectedLadders.Add(next))
+                        frontier.Enqueue(next);
+                }
+            }
+
+            var yieldedDestinations = new HashSet<GridPosition>();
+
+            foreach (var ladderCell in connectedLadders)
+            {
+                // 사다리는 바로 아래 바닥 또는 좌우에 닿은 표면으로 출입할 수 있다.
+                for (var xOffset = -1; xOffset <= 1; xOffset++)
+                {
+                    for (var yOffset = -1; yOffset <= 0; yOffset++)
+                    {
+                        var destination = new GridPosition(
+                            ladderCell.x + xOffset,
+                            ladderCell.y + yOffset);
+
+                        if (destination == position)
+                            continue;
+
+                        // 핵심 수정:
+                        // 같은 높이의 옆칸 이동은 일반 이동으로 처리한다.
+                        // 이 조건이 없으면 사다리 1블럭 전/옆에서도 사다리 이동 애니메이션이 시작될 수 있다.
+                        if (destination.Y == position.Y)
+                            continue;
+
+                        if (!yieldedDestinations.Add(destination))
+                            continue;
+
+                        if (!IsSurface(destination))
+                            continue;
+
+                        // 실제 경로 탐색에서는 사다리 입구/출구가 비어 있어야 한다.
+                        // IsLadderConnection처럼 판정만 할 때는 allowOccupiedTraversal=true로 통과 가능.
+                        if (allowOccupiedTraversal || CanEnter(destination, mover))
+                            yield return destination;
+                    }
+                }
+            }
+        }
+
+        public bool IsLadderConnection(GridPosition from, GridPosition to)
+        {
+            if (ladderTilemap == null)
+                return false;
+
+            // 핵심 수정:
+            // 높이가 변하지 않는 이동은 사다리 연결이 아니다.
+            if (from.Y == to.Y)
+                return false;
+
+            foreach (var destination in GetLadderDestinations(from, null, true))
+            {
+                if (destination == to)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool TryGetLadderWorldX(GridPosition from, GridPosition to, out float worldX)
+        {
+            worldX = 0f;
+
+            if (ladderTilemap == null)
+                return false;
+
+            // 같은 높이 이동은 사다리 이동이 아니므로 ladder X가 필요 없다.
+            if (from.Y == to.Y)
+                return false;
+
+            Vector3Int? bestEntry = null;
+            var bestScore = int.MaxValue;
+
+            for (var xOffset = -1; xOffset <= 1; xOffset++)
+            {
+                for (var yOffset = 0; yOffset <= 1; yOffset++)
+                {
+                    var entry = new Vector3Int(
+                        from.X + xOffset,
+                        from.Y + yOffset,
+                        0);
+
+                    if (!ladderTilemap.HasTile(entry))
+                        continue;
+
+                    var component = CollectLadderComponent(entry);
+
+                    foreach (var ladderCell in component)
+                    {
+                        if (!IsSurfaceTouchingLadderCell(to, ladderCell))
+                            continue;
+
+                        // from에서 가까운 사다리 진입칸,
+                        // to와 이어지는 사다리칸,
+                        // 그리고 같은 세로 사다리 컬럼을 우선한다.
+                        var score =
+                            Mathf.Abs(entry.x - from.X) +
+                            Mathf.Abs(entry.y - from.Y) +
+                            Mathf.Abs(ladderCell.x - to.X) +
+                            Mathf.Abs(ladderCell.y - to.Y) +
+                            Mathf.Abs(entry.x - ladderCell.x) * 2;
+
+                        if (score >= bestScore)
+                            continue;
+
+                        bestScore = score;
+                        bestEntry = entry;
+                    }
+                }
+            }
+
+            if (!bestEntry.HasValue)
+                return false;
+
+            worldX = grid.GetCellCenterWorld(bestEntry.Value).x;
+            return true;
+        }
+
+        private HashSet<Vector3Int> CollectLadderComponent(Vector3Int entry)
+        {
+            var component = new HashSet<Vector3Int>();
+            var frontier = new Queue<Vector3Int>();
+
+            component.Add(entry);
+            frontier.Enqueue(entry);
+
+            var directions = new[]
+            {
+                Vector3Int.left,
+                Vector3Int.right,
+                Vector3Int.up,
+                Vector3Int.down
+            };
+
+            while (frontier.Count > 0)
+            {
+                var current = frontier.Dequeue();
+
+                foreach (var direction in directions)
+                {
+                    var next = current + direction;
+
+                    if (ladderTilemap.HasTile(next) && component.Add(next))
+                        frontier.Enqueue(next);
+                }
+            }
+
+            return component;
+        }
+
+        private static bool IsSurfaceTouchingLadderCell(GridPosition surface, Vector3Int ladderCell)
+        {
+            return Mathf.Abs(ladderCell.x - surface.X) <= 1 &&
+                   (surface.Y == ladderCell.y || surface.Y == ladderCell.y - 1);
+        }
+
+        public bool TryGetDirectionalNeighbor(
+            GridPosition position,
+            int horizontalDirection,
+            TacticalUnit mover,
+            out GridPosition neighbor)
+        {
+            var targetX = position.X + (horizontalDirection < 0 ? -1 : 1);
+
+            foreach (var candidate in GetNeighbors(position, mover))
+            {
+                if (candidate.X != targetX || IsLadderConnection(position, candidate))
+                    continue;
+
+                neighbor = candidate;
+                return true;
+            }
+
+            neighbor = default;
+            return false;
+        }
+
+        public KnockbackLandingType ResolveKnockbackLanding(
+            GridPosition position,
+            int horizontalDirection,
+            TacticalUnit mover,
+            out GridPosition landing,
+            out int fallDistance,
+            out TacticalUnit blockingUnit)
+        {
+            var targetX = position.X + (horizontalDirection < 0 ? -1 : 1);
+
+            blockingUnit = null;
+            fallDistance = 0;
+            landing = default;
+
+            // 일반 이동과 달리 넉백은 큰 낙하도 허용한다.
+            for (var y = position.Y + maximumStepUp; y >= walkableTilemap.cellBounds.yMin; y--)
+            {
+                var candidate = new GridPosition(targetX, y);
+
+                if (!IsSurface(candidate))
+                    continue;
+
+                if (TryGetOccupant(candidate, out var occupant) && occupant != mover)
+                {
+                    blockingUnit = occupant;
+                    landing = candidate;
+                    fallDistance = Mathf.Max(0, position.Y - candidate.Y);
+                    return KnockbackLandingType.Collision;
+                }
+
+                landing = candidate;
+                fallDistance = Mathf.Max(0, position.Y - candidate.Y);
+                return KnockbackLandingType.Landing;
+            }
+
+            // 해당 열에 지형은 있는데 도달 가능한 표면이 없으면 벽으로 본다.
+            foreach (var cell in walkableTilemap.cellBounds.allPositionsWithin)
+            {
+                if (cell.x == targetX && walkableTilemap.HasTile(cell))
+                    return KnockbackLandingType.Collision;
+            }
+
+            return KnockbackLandingType.Void;
+        }
+
+        private bool IsSurface(GridPosition position)
+        {
+            if (!IsWalkable(position))
+                return false;
+
+            var directlyAbove = new GridPosition(position.X, position.Y + 1);
+            return !IsWalkable(directlyAbove);
+        }
+
+        public bool TryOccupy(TacticalUnit unit, GridPosition destination)
+        {
+            if (unit == null || !CanEnter(destination, unit))
+                return false;
+
+            RemoveOccupancy(unit);
+            occupants[destination] = unit;
+            OccupancyChanged?.Invoke();
+
+            return true;
+        }
+
+        public void RemoveOccupancy(TacticalUnit unit)
+        {
+            GridPosition? found = null;
+
+            foreach (var pair in occupants)
+            {
+                if (pair.Value == unit)
+                {
+                    found = pair.Key;
+                    break;
+                }
+            }
+
+            if (found.HasValue)
+            {
+                occupants.Remove(found.Value);
+                OccupancyChanged?.Invoke();
+            }
+        }
+
+        private void OnDestroy() => occupants.Clear();
+    }
+}

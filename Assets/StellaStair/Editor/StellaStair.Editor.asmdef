@@ -1,0 +1,7 @@
+{
+  "name": "StellaStair.Editor",
+  "rootNamespace": "StellaStair.Editor",
+  "references": ["StellaStair.Runtime", "Unity.ugui"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}
