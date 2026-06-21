@@ -161,6 +161,15 @@ namespace StellaStair.Grid
             {
                 var targetX = position.X + direction;
 
+                // A ladder is a traversal-only floor during path searches.
+                // CanEnter still rejects it, so a unit cannot stop on it.
+                var ladderTraversal = new GridPosition(targetX, position.Y);
+                if (allowOccupiedTraversal && IsLadderTraversalCell(ladderTraversal))
+                {
+                    yield return ladderTraversal;
+                    continue;
+                }
+
                 // 가장 높은 유효 표면을 먼저 선택한다.
                 // 같은 x에서 수직으로 올라가는 경로를 만들지 않아 단차 타일을 관통하지 않는다.
                 for (var y = position.Y + maximumStepUp; y >= position.Y - maximumDrop; y--)
@@ -177,6 +186,16 @@ namespace StellaStair.Grid
 
             foreach (var ladderDestination in GetLadderDestinations(position, mover, allowOccupiedTraversal))
                 yield return ladderDestination;
+        }
+
+        private bool IsLadderTraversalCell(GridPosition position)
+        {
+            if (ladderTilemap == null || IsWalkable(position))
+                return false;
+
+            var cell = position.ToVector3Int();
+            return ladderTilemap.HasTile(cell) ||
+                   ladderTilemap.HasTile(cell + Vector3Int.up);
         }
 
         private IEnumerable<GridPosition> GetLadderDestinations(
