@@ -104,6 +104,12 @@ namespace StellaStair.Units
             ApplyVisual();
         }
 
+        public void SetVisible(bool visible)
+        {
+            if (barRoot != null)
+                barRoot.gameObject.SetActive(visible && unit.IsAlive);
+        }
+
         private void ApplyVisual()
         {
             if (fillRenderer == null) return;

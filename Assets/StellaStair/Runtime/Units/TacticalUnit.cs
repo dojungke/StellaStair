@@ -6,13 +6,18 @@ using UnityEngine;
 
 namespace StellaStair.Units
 {
-    public enum UnitTeam { Player, Enemy }
+    public enum UnitTeam { Player, Enemy, Neutral }
 
     [RequireComponent(typeof(Collider2D))]
     public sealed class TacticalUnit : MonoBehaviour
     {
         [SerializeField] private UnitDefinition definition;
         [SerializeField] private UnitTeam team;
+        [SerializeField] private bool isCrate;
+        [SerializeField] private bool isObjective;
+        [SerializeField] private bool isExplosiveCrate;
+        [SerializeField, Min(1)] private int crateMaxHealth = 2;
+        [SerializeField, Min(1)] private int explosionDamage = 3;
         [SerializeField, Min(1)] private int fallbackMovementPoints = 5;
         [SerializeField, Min(0.1f)] private float fallbackMoveSpeed = 5f;
         [SerializeField, Min(1)] private int fallbackMaxHealth = 10;
@@ -36,6 +41,9 @@ namespace StellaStair.Units
         private TacticalUnit reservedImpactTarget;
         public UnitDefinition Definition => definition;
         public UnitTeam Team => team;
+        public bool IsCrate => isCrate;
+        public bool IsObjective => isObjective;
+        public bool IsExplosiveCrate => isExplosiveCrate;
         public GridPosition Position { get; private set; }
         public GridPosition TurnStartPosition { get; private set; }
         public bool IsPlaced { get; private set; }
@@ -50,7 +58,9 @@ namespace StellaStair.Units
         public int CurrentHealth { get; private set; }
         public int RemainingMovement { get; private set; }
         public int MovementPoints => definition != null ? definition.MovementPoints : fallbackMovementPoints;
-        public int MaxHealth => definition != null ? definition.MaxHealth : fallbackMaxHealth;
+        public int MaxHealth => isCrate
+            ? crateMaxHealth
+            : definition != null ? definition.MaxHealth : fallbackMaxHealth;
         public int AttackDamage => definition != null ? definition.AttackDamage : fallbackAttackDamage;
         public int AttackRange => definition != null ? definition.AttackRange : fallbackAttackRange;
         public int VerticalAttackRange => definition != null
@@ -91,6 +101,9 @@ namespace StellaStair.Units
 
         public void Configure(UnitDefinition unitDefinition, UnitTeam unitTeam)
         {
+            isCrate = false;
+            isObjective = false;
+            isExplosiveCrate = false;
             definition = unitDefinition;
             team = unitTeam;
             if (!IsPlaced)
@@ -116,7 +129,7 @@ namespace StellaStair.Units
 
         public bool TryMoveTo(GridPosition destination)
         {
-            if (!IsAlive || !IsPlaced || IsMoving || IsAttacking || isImpactReserved ||
+            if (isCrate || !IsAlive || !IsPlaced || IsMoving || IsAttacking || isImpactReserved ||
                 HasAttacked && Team == UnitTeam.Player ||
                 RemainingMovement <= 0 || destination == Position)
                 return false;
@@ -236,7 +249,7 @@ namespace StellaStair.Units
 
         public bool CanAttack(TacticalUnit target, bool allowFriendlyFire = false)
         {
-            return IsAlive && IsPlaced && !IsMoving && !IsAttacking &&
+            return !isCrate && IsAlive && IsPlaced && !IsMoving && !IsAttacking &&
                    !isImpactReserved && !HasAttacked &&
                    target != null && target != this && target.IsAlive && target.IsPlaced &&
                    (allowFriendlyFire || target.Team != Team) &&
@@ -245,7 +258,7 @@ namespace StellaStair.Units
 
         public bool CanAttackPosition(GridPosition targetPosition)
         {
-            return IsAlive && IsPlaced && !IsMoving && !IsAttacking &&
+            return !isCrate && IsAlive && IsPlaced && !IsMoving && !IsAttacking &&
                    !isImpactReserved && !HasAttacked &&
                    targetPosition != Position && IsPositionAttackableFrom(Position, targetPosition);
         }
@@ -281,7 +294,23 @@ namespace StellaStair.Units
             HasAttacked = true;
             if (targetPosition.X != Position.X)
                 FacingDirection = targetPosition.X > Position.X ? 1 : -1;
-            StartCoroutine(AttackRoutine(targetPosition, allowFriendlyFire));
+            StartCoroutine(AttackRoutine(targetPosition, allowFriendlyFire, false));
+            return true;
+        }
+
+        public bool TryAttackWoodPosition(GridPosition targetPosition)
+        {
+            if (isCrate || !IsAlive || !IsPlaced || IsMoving || IsAttacking ||
+                isImpactReserved || HasAttacked || board == null ||
+                !board.IsWoodTile(targetPosition))
+                return false;
+            if (targetPosition != Position && !CanAttackPosition(targetPosition))
+                return false;
+
+            HasAttacked = true;
+            if (targetPosition.X != Position.X)
+                FacingDirection = targetPosition.X > Position.X ? 1 : -1;
+            StartCoroutine(AttackRoutine(targetPosition, true, true));
             return true;
         }
 
@@ -295,8 +324,11 @@ namespace StellaStair.Units
             if (CurrentHealth > 0)
                 return;
 
+            var deathPosition = Position;
             if (board != null)
                 board.RemoveOccupancy(this);
+            if (isExplosiveCrate && board != null)
+                board.Detonate(deathPosition, this, explosionDamage);
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
@@ -324,6 +356,9 @@ namespace StellaStair.Units
 
         public void SetPreviewDamage(int damage) => healthBar?.SetPreviewDamage(damage);
 
+        public void SetHealthBarVisible(bool visible) =>
+            healthBar?.SetVisible(!isCrate || visible);
+
         private IEnumerator AttackPreviewBlinkRoutine()
         {
             while (true)
@@ -336,7 +371,8 @@ namespace StellaStair.Units
             }
         }
 
-        private IEnumerator AttackRoutine(GridPosition targetPosition, bool allowFriendlyFire)
+        private IEnumerator AttackRoutine(
+            GridPosition targetPosition, bool allowFriendlyFire, bool attackWoodOnly)
         {
             IsAttacking = true;
             var attackStartPosition = Position;
@@ -350,11 +386,30 @@ namespace StellaStair.Units
             var areaTargets = new List<TacticalUnit>();
             if (AreaKnockbackRadius > 0 && AreaKnockbackDistance > 0)
             {
-                foreach (var nearby in board.GetOccupantsInRange(targetPosition, AreaKnockbackRadius))
-                    areaTargets.Add(nearby);
+                if (attackWoodOnly)
+                {
+                    for (var xOffset = -1; xOffset <= 1; xOffset += 2)
+                    {
+                        var sidePosition = new GridPosition(
+                            targetPosition.X + xOffset, targetPosition.Y - 1);
+                        if (board.TryGetOccupant(sidePosition, out var sideUnit) &&
+                            sideUnit != null && sideUnit != this)
+                            areaTargets.Add(sideUnit);
+                    }
+                }
+                else
+                {
+                    foreach (var nearby in board.GetOccupantsInRange(
+                                 targetPosition, AreaKnockbackRadius))
+                    {
+                        if (nearby.Position.X != targetPosition.X)
+                            areaTargets.Add(nearby);
+                    }
+                }
             }
 
-            if (board.TryGetOccupant(targetPosition, out var target) && target != this &&
+            if (!attackWoodOnly &&
+                board.TryGetOccupant(targetPosition, out var target) && target != this &&
                 target.IsAlive && (allowFriendlyFire || target.Team != Team))
             {
                 // Keep a lethally-hit target alive until knockback resolves so it can
@@ -374,11 +429,15 @@ namespace StellaStair.Units
                 if (deferLethalDamage && target != null && target.IsAlive)
                     target.TakeDamage(AttackDamage);
             }
+            else
+            {
+                board.DamageWood(targetPosition, AttackDamage);
+            }
 
             var startedAreaKnockback = false;
             foreach (var nearby in areaTargets)
             {
-                if (nearby == null || !nearby.IsAlive)
+                if (nearby == null || !nearby.IsAlive || attackWoodOnly && nearby == this)
                     continue;
                 var radialDirection = nearby.Position.X == targetPosition.X
                     ? FacingDirection
@@ -410,6 +469,51 @@ namespace StellaStair.Units
                 ? source.FacingDirection
                 : Position.X > source.Position.X ? 1 : -1;
             return TryKnockbackInDirection(direction, distance);
+        }
+
+        public bool TryFallAfterSupportDestroyed()
+        {
+            if (!IsAlive || !IsPlaced || IsMoving || board == null)
+                return false;
+
+            var result = board.ResolveVerticalFall(
+                Position, this, out var landing, out var fallDistance, out var blocker);
+            var fallDamage = Mathf.Min(MaxHealth, Mathf.Max(0, fallDistance - 1));
+
+            if (result == KnockbackLandingType.Landing)
+            {
+                if (!board.TryOccupy(this, landing))
+                    return false;
+                StartCoroutine(SupportDestroyedFallRoutine(landing, fallDamage));
+                return true;
+            }
+
+            if (result == KnockbackLandingType.Collision && blocker != null && blocker.IsAlive)
+            {
+                if (blocker.isImpactReserved)
+                    return false;
+                var pushResult = board.ResolveKnockbackLanding(
+                    blocker.Position, FacingDirection, blocker, out _, out _, out _);
+                if (pushResult == KnockbackLandingType.Landing)
+                {
+                    blocker.isImpactReserved = true;
+                    reservedImpactTarget = blocker;
+                    StartCoroutine(FallPushCollisionRoutine(
+                        new List<GridPosition>(), landing, blocker,
+                        FacingDirection, fallDamage));
+                }
+                else
+                {
+                    StartCoroutine(FallCollisionRoutine(
+                        new List<GridPosition>(), landing, blocker,
+                        blocker.CurrentHealth, CurrentHealth));
+                }
+                return true;
+            }
+
+            board.RemoveOccupancy(this);
+            StartCoroutine(SupportDestroyedVoidFallRoutine());
+            return true;
         }
 
         public bool TryKnockbackInDirection(
@@ -719,6 +823,41 @@ namespace StellaStair.Units
             }
         }
 
+        public void ConfigureAsCrate(
+            int maxHealth = 2, bool explosive = false, int damage = 3)
+        {
+            isCrate = true;
+            isObjective = false;
+            isExplosiveCrate = explosive;
+            definition = null;
+            team = UnitTeam.Neutral;
+            crateMaxHealth = Mathf.Max(1, maxHealth);
+            explosionDamage = Mathf.Max(1, damage);
+            if (!IsPlaced)
+            {
+                CurrentHealth = MaxHealth;
+                RemainingMovement = 0;
+            }
+            SetHealthBarVisible(false);
+        }
+
+        public void ConfigureAsObjective(int maxHealth = 8)
+        {
+            isCrate = true;
+            isObjective = true;
+            isExplosiveCrate = false;
+            definition = null;
+            team = UnitTeam.Neutral;
+            crateMaxHealth = Mathf.Max(1, maxHealth);
+            explosionDamage = 0;
+            if (!IsPlaced)
+            {
+                CurrentHealth = MaxHealth;
+                RemainingMovement = 0;
+            }
+            SetHealthBarVisible(false);
+        }
+
         private IEnumerator KnockbackMoveRoutine(
             IReadOnlyList<GridPosition> path,
             GridPosition destination,
@@ -736,6 +875,31 @@ namespace StellaStair.Units
             MoveCompleted?.Invoke(this);
             if (fallDamage > 0)
                 TakeDamage(fallDamage);
+        }
+
+        private IEnumerator SupportDestroyedFallRoutine(
+            GridPosition destination, int fallDamage)
+        {
+            IsMoving = true;
+            MoveStarted?.Invoke(this);
+            var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
+            yield return MoveStepRoutine(GetStandingWorldPosition(destination), speed);
+            Position = destination;
+            IsMoving = false;
+            MoveCompleted?.Invoke(this);
+            if (fallDamage > 0)
+                TakeDamage(fallDamage);
+        }
+
+        private IEnumerator SupportDestroyedVoidFallRoutine()
+        {
+            IsMoving = true;
+            MoveStarted?.Invoke(this);
+            var start = transform.position;
+            var target = start + Vector3.down * (board.Grid.cellSize.y * 4f);
+            yield return MoveTransform(start, target, 0.55f);
+            IsMoving = false;
+            TakeDamage(MaxHealth);
         }
 
         private IEnumerator FallIntoVoidRoutine(IReadOnlyList<GridPosition> path, int direction)

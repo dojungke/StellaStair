@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using StellaStair.Units;
 using UnityEngine;
@@ -14,22 +15,52 @@ namespace StellaStair.Grid
         [SerializeField] private Tilemap walkableTilemap;
         [SerializeField] private Tilemap playerDeploymentTilemap;
         [SerializeField] private Tilemap ladderTilemap;
+        [SerializeField] private Tilemap woodTilemap;
+        [SerializeField] private Tilemap crateTilemap;
+        [SerializeField] private Tilemap bombCrateTilemap;
+        [SerializeField] private Tilemap objectiveTilemap;
+        [SerializeField] private Tilemap defenseObjectiveTilemap;
+        [SerializeField, Min(1)] private int woodMaxHealth = 2;
+        [SerializeField, Min(1)] private int objectiveMaxHealth = 8;
+        [SerializeField, Min(1)] private int defenseObjectiveMaxHealth = 12;
         [SerializeField, Min(0)] private int maximumStepUp = 1;
         [SerializeField, Min(0)] private int maximumDrop = 2;
 
         private readonly Dictionary<GridPosition, TacticalUnit> occupants = new();
+        private readonly Dictionary<Vector3Int, int> woodHealth = new();
+        private readonly List<TacticalUnit> objectiveUnits = new();
+        private readonly List<TacticalUnit> defenseObjectiveUnits = new();
         private static readonly int[] HorizontalDirections = { -1, 1 };
+        private static Sprite explosionSprite;
 
         public event Action OccupancyChanged;
 
         public UnityEngine.Grid Grid => grid;
         public Tilemap WalkableTilemap => walkableTilemap;
+        public Tilemap PlayerDeploymentTilemap => playerDeploymentTilemap;
         public Tilemap LadderTilemap => ladderTilemap;
+        public Tilemap WoodTilemap => woodTilemap;
+        public Tilemap CrateTilemap => crateTilemap;
+        public Tilemap BombCrateTilemap => bombCrateTilemap;
+        public Tilemap ObjectiveTilemap => objectiveTilemap;
+        public Tilemap DefenseObjectiveTilemap => defenseObjectiveTilemap;
+        public int WoodMaxHealth => woodMaxHealth;
+        public int ObjectiveMaxHealth => objectiveMaxHealth;
+        public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth;
+        public IReadOnlyList<TacticalUnit> ObjectiveUnits => objectiveUnits;
+        public IReadOnlyList<TacticalUnit> DefenseObjectiveUnits => defenseObjectiveUnits;
 
         private void Awake()
         {
             if (grid == null || walkableTilemap == null)
                 throw new InvalidOperationException($"{name}: Grid와 Walkable Tilemap을 연결해야 합니다.");
+            InitializeWoodHealth();
+            SpawnCratesFromTilemap(crateTilemap, false);
+            SpawnCratesFromTilemap(bombCrateTilemap, true);
+            SpawnObjectivesFromTilemap(objectiveTilemap, objectiveUnits, "Attack Objective", objectiveMaxHealth);
+            SpawnObjectivesFromTilemap(
+                defenseObjectiveTilemap, defenseObjectiveUnits,
+                "Defense Objective", defenseObjectiveMaxHealth);
         }
 
         public void Configure(UnityEngine.Grid targetGrid, Tilemap walkable, Tilemap deployment)
@@ -40,6 +71,120 @@ namespace StellaStair.Grid
         }
 
         public void ConfigureLadder(Tilemap ladders) => ladderTilemap = ladders;
+
+        public void ConfigureWood(Tilemap wood, int maxHealth = 2)
+        {
+            woodTilemap = wood;
+            woodMaxHealth = Mathf.Max(1, maxHealth);
+            InitializeWoodHealth();
+        }
+
+        public void ConfigureCrates(Tilemap crates)
+        {
+            crateTilemap = crates;
+            if (Application.isPlaying)
+                SpawnCratesFromTilemap(crateTilemap, false);
+        }
+
+        public void ConfigureBombCrates(Tilemap crates)
+        {
+            bombCrateTilemap = crates;
+            if (Application.isPlaying)
+                SpawnCratesFromTilemap(bombCrateTilemap, true);
+        }
+
+        public void ConfigureObjectives(Tilemap objectives, int maxHealth = 8)
+        {
+            objectiveTilemap = objectives;
+            objectiveMaxHealth = Mathf.Max(1, maxHealth);
+            if (Application.isPlaying)
+                SpawnObjectivesFromTilemap(
+                    objectiveTilemap, objectiveUnits, "Attack Objective", objectiveMaxHealth);
+        }
+
+        public void ConfigureDefenseObjectives(Tilemap objectives, int maxHealth = 12)
+        {
+            defenseObjectiveTilemap = objectives;
+            defenseObjectiveMaxHealth = Mathf.Max(1, maxHealth);
+            if (Application.isPlaying)
+                SpawnObjectivesFromTilemap(
+                    defenseObjectiveTilemap, defenseObjectiveUnits,
+                    "Defense Objective", defenseObjectiveMaxHealth);
+        }
+
+        private void SpawnCratesFromTilemap(Tilemap source, bool explosive)
+        {
+            if (source == null || grid == null || walkableTilemap == null)
+                return;
+
+            var crateCells = new List<Vector3Int>();
+            foreach (var cell in source.cellBounds.allPositionsWithin)
+                if (source.HasTile(cell))
+                    crateCells.Add(cell);
+
+            foreach (var cell in crateCells)
+            {
+                var position = new GridPosition(cell.x, cell.y - 1);
+                if (!CanEnter(position))
+                    continue;
+
+                var crateObject = new GameObject(
+                    $"{(explosive ? "Bomb Crate" : "Crate")} {cell.x},{cell.y}",
+                    typeof(SpriteRenderer), typeof(BoxCollider2D));
+                crateObject.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
+                var renderer = crateObject.GetComponent<SpriteRenderer>();
+                renderer.sprite = source.GetSprite(cell);
+                renderer.color = source.GetColor(cell);
+                renderer.sortingOrder = 18;
+                crateObject.GetComponent<BoxCollider2D>().size = Vector2.one;
+                var crate = crateObject.AddComponent<TacticalUnit>();
+                crate.ConfigureAsCrate(explosive ? 1 : 2, explosive, 3);
+                if (crate.TryPlace(this, position, false))
+                    source.SetTile(cell, null);
+                else
+                    Destroy(crateObject);
+            }
+        }
+
+        private void SpawnObjectivesFromTilemap(
+            Tilemap source, List<TacticalUnit> destination, string objectName, int maxHealth)
+        {
+            if (source == null || grid == null || walkableTilemap == null)
+                return;
+
+            var targetCells = new List<Vector3Int>();
+            foreach (var cell in source.cellBounds.allPositionsWithin)
+                if (source.HasTile(cell))
+                    targetCells.Add(cell);
+
+            foreach (var cell in targetCells)
+            {
+                var position = new GridPosition(cell.x, cell.y - 1);
+                if (!CanEnter(position))
+                    continue;
+
+                var targetObject = new GameObject(
+                    $"{objectName} {cell.x},{cell.y}",
+                    typeof(SpriteRenderer), typeof(BoxCollider2D));
+                targetObject.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+                var renderer = targetObject.GetComponent<SpriteRenderer>();
+                renderer.sprite = source.GetSprite(cell);
+                renderer.color = source.GetColor(cell);
+                renderer.sortingOrder = 19;
+                targetObject.GetComponent<BoxCollider2D>().size = Vector2.one;
+                var objective = targetObject.AddComponent<TacticalUnit>();
+                objective.ConfigureAsObjective(maxHealth);
+                if (objective.TryPlace(this, position, false))
+                {
+                    destination.Add(objective);
+                    source.SetTile(cell, null);
+                }
+                else
+                {
+                    Destroy(targetObject);
+                }
+            }
+        }
 
         public GridPosition WorldToPosition(Vector3 world) => GridPosition.From(grid.WorldToCell(world));
 
@@ -56,7 +201,130 @@ namespace StellaStair.Grid
             PositionToWorld(position) + Vector3.up * grid.cellSize.y;
 
         public bool IsWalkable(GridPosition position) =>
-            walkableTilemap.HasTile(position.ToVector3Int());
+            walkableTilemap.HasTile(position.ToVector3Int()) ||
+            woodTilemap != null && woodTilemap.HasTile(position.ToVector3Int());
+
+        public bool IsWoodTile(GridPosition position) =>
+            woodTilemap != null && woodTilemap.HasTile(position.ToVector3Int());
+
+        public int GetWoodHealth(GridPosition position)
+        {
+            var cell = position.ToVector3Int();
+            if (woodTilemap == null || !woodTilemap.HasTile(cell))
+                return 0;
+            if (!woodHealth.TryGetValue(cell, out var health))
+            {
+                health = woodMaxHealth;
+                woodHealth[cell] = health;
+            }
+            return health;
+        }
+
+        public bool DamageWood(GridPosition position, int damage)
+        {
+            if (damage <= 0 || !IsWoodTile(position))
+                return false;
+
+            var cell = position.ToVector3Int();
+            var remaining = Mathf.Max(0, GetWoodHealth(position) - damage);
+            if (remaining == 0)
+            {
+                occupants.TryGetValue(position, out var supportedUnit);
+                woodHealth.Remove(cell);
+                woodTilemap.SetTile(cell, null);
+                if (supportedUnit != null && supportedUnit.IsAlive)
+                    supportedUnit.TryFallAfterSupportDestroyed();
+                OccupancyChanged?.Invoke();
+                return true;
+            }
+
+            woodHealth[cell] = remaining;
+            woodTilemap.SetTileFlags(cell, TileFlags.None);
+            var ratio = remaining / (float)woodMaxHealth;
+            woodTilemap.SetColor(cell, new Color(1f, Mathf.Lerp(0.45f, 1f, ratio),
+                Mathf.Lerp(0.35f, 1f, ratio), 1f));
+            return true;
+        }
+
+        public void Detonate(
+            GridPosition center, TacticalUnit source, int damage)
+        {
+            damage = Mathf.Max(1, damage);
+            var targets = new List<TacticalUnit>();
+            foreach (var pair in occupants)
+            {
+                if (pair.Value == null || pair.Value == source || !pair.Value.IsAlive)
+                    continue;
+                if (Mathf.Abs(pair.Key.X - center.X) <= 1 &&
+                    Mathf.Abs(pair.Key.Y - center.Y) <= 1)
+                    targets.Add(pair.Value);
+            }
+
+            StartCoroutine(ExplosionVisualRoutine(center));
+            foreach (var target in targets)
+                if (target != null && target.IsAlive)
+                    target.TakeDamage(damage);
+
+            for (var x = center.X - 1; x <= center.X + 1; x++)
+                for (var y = center.Y - 1; y <= center.Y + 1; y++)
+                    DamageWood(new GridPosition(x, y), damage);
+        }
+
+        private IEnumerator ExplosionVisualRoutine(GridPosition center)
+        {
+            if (explosionSprite == null)
+            {
+                explosionSprite = Sprite.Create(
+                    Texture2D.whiteTexture, new Rect(0, 0, 1, 1),
+                    new Vector2(0.5f, 0.5f), 1f);
+                explosionSprite.name = "Runtime Explosion Sprite";
+            }
+
+            var root = new GameObject("Bomb Explosion");
+            var renderers = new List<SpriteRenderer>();
+            for (var x = center.X - 1; x <= center.X + 1; x++)
+            {
+                for (var y = center.Y - 1; y <= center.Y + 1; y++)
+                {
+                    var cell = new GameObject("Explosion Cell");
+                    cell.transform.SetParent(root.transform);
+                    cell.transform.position = PositionToStandingWorld(new GridPosition(x, y));
+                    cell.transform.localScale = grid.cellSize * 0.9f;
+                    var renderer = cell.AddComponent<SpriteRenderer>();
+                    renderer.sprite = explosionSprite;
+                    renderer.color = new Color(1f, 0.28f, 0.03f, 0.75f);
+                    renderer.sortingOrder = 45;
+                    renderers.Add(renderer);
+                }
+            }
+
+            var elapsed = 0f;
+            const float duration = 0.28f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var alpha = 0.75f * (1f - Mathf.Clamp01(elapsed / duration));
+                foreach (var renderer in renderers)
+                {
+                    if (renderer == null) continue;
+                    var color = renderer.color;
+                    color.a = alpha;
+                    renderer.color = color;
+                }
+                yield return null;
+            }
+            Destroy(root);
+        }
+
+        private void InitializeWoodHealth()
+        {
+            woodHealth.Clear();
+            if (woodTilemap == null)
+                return;
+            foreach (var cell in woodTilemap.cellBounds.allPositionsWithin)
+                if (woodTilemap.HasTile(cell))
+                    woodHealth[cell] = woodMaxHealth;
+        }
 
         public bool IsPlayerDeploymentCell(GridPosition position) =>
             playerDeploymentTilemap != null && playerDeploymentTilemap.HasTile(position.ToVector3Int());
@@ -455,13 +723,51 @@ namespace StellaStair.Grid
             }
 
             // 해당 열에 지형은 있는데 도달 가능한 표면이 없으면 벽으로 본다.
-            foreach (var cell in walkableTilemap.cellBounds.allPositionsWithin)
+            if (HasTerrainInColumn(walkableTilemap, targetX) ||
+                HasTerrainInColumn(woodTilemap, targetX))
+                return KnockbackLandingType.Collision;
+
+            return KnockbackLandingType.Void;
+        }
+
+        public KnockbackLandingType ResolveVerticalFall(
+            GridPosition position,
+            TacticalUnit mover,
+            out GridPosition landing,
+            out int fallDistance,
+            out TacticalUnit blockingUnit)
+        {
+            landing = default;
+            fallDistance = 0;
+            blockingUnit = null;
+
+            for (var y = position.Y - 1; y >= walkableTilemap.cellBounds.yMin; y--)
             {
-                if (cell.x == targetX && walkableTilemap.HasTile(cell))
+                var candidate = new GridPosition(position.X, y);
+                if (!IsSurface(candidate))
+                    continue;
+
+                landing = candidate;
+                fallDistance = Mathf.Max(0, position.Y - candidate.Y);
+                if (TryGetOccupant(candidate, out var occupant) && occupant != mover)
+                {
+                    blockingUnit = occupant;
                     return KnockbackLandingType.Collision;
+                }
+                return KnockbackLandingType.Landing;
             }
 
             return KnockbackLandingType.Void;
+        }
+
+        private static bool HasTerrainInColumn(Tilemap tilemap, int x)
+        {
+            if (tilemap == null)
+                return false;
+            foreach (var cell in tilemap.cellBounds.allPositionsWithin)
+                if (cell.x == x && tilemap.HasTile(cell))
+                    return true;
+            return false;
         }
 
         private bool IsSurface(GridPosition position)
@@ -505,6 +811,12 @@ namespace StellaStair.Grid
             }
         }
 
-        private void OnDestroy() => occupants.Clear();
+        private void OnDestroy()
+        {
+            occupants.Clear();
+            woodHealth.Clear();
+            objectiveUnits.Clear();
+            defenseObjectiveUnits.Clear();
+        }
     }
 }

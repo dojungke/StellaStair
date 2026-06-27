@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f904c0c5fdfbc4abe4ad7a98c8a87f, type: 3}
+  m_Name: BattleUI
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Presentation.BattleUiData
+  elements:
+  - hierarchyPath: Canvas/Button/Text (TMP)
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: Button
+  - hierarchyPath: Canvas/Button (1)
+    active: 1
+    anchorMin: {x: 1, y: 0}
+    anchorMax: {x: 1, y: 0}
+    anchoredPosition: {x: -600, y: 250}
+    sizeDelta: {x: 300, y: 300}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: Canvas/Button
+    active: 1
+    anchorMin: {x: 1, y: 0}
+    anchorMax: {x: 1, y: 0}
+    anchoredPosition: {x: -250, y: 250}
+    sizeDelta: {x: 300, y: 300}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: Canvas/Button (2)/Text (TMP)
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: Button
+  - hierarchyPath: Canvas/Button (1)/Text (TMP)
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: Button
+  - hierarchyPath: Canvas
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 0, y: 0}
+    anchoredPosition: {x: 1280, y: 720}
+    sizeDelta: {x: 2560, y: 1440}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: Canvas/Button (2)
+    active: 1
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    anchoredPosition: {x: 250, y: -250}
+    sizeDelta: {x: 300, y: 200}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  runtimeUiPrefab: {fileID: 1825159638559018748, guid: fe5889ceb30652d4f95e33a3503408d3, type: 3}

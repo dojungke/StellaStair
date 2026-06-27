@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using StellaStair.Battle;
-using StellaStair.Grid;
 using UnityEngine;
 
 namespace StellaStair.Presentation
@@ -52,25 +51,29 @@ namespace StellaStair.Presentation
                 return;
 
             foreach (var intent in battle.EnemyIntents)
-                if (intent.WillAttack)
-                    CreateCross(intent.TargetPosition);
+                if (intent.WillAttack && intent.Enemy != null && intent.Enemy.IsAlive)
+                    CreateWarning(intent.Enemy);
         }
 
-        private void CreateCross(GridPosition position)
+        private void CreateWarning(StellaStair.Units.TacticalUnit enemy)
         {
-            var marker = new GameObject($"Enemy Attack Warning {position}");
-            marker.transform.position = battle.Board.PositionToStandingWorld(position);
-            CreateBar(marker.transform, 45f);
-            CreateBar(marker.transform, -45f);
+            var marker = new GameObject($"Enemy Attack Warning {enemy.name}");
+            marker.transform.SetParent(enemy.transform, false);
+            marker.transform.localPosition = Vector3.up * 1.15f;
+            CreateBar(marker.transform, 0f, new Vector3(0.14f, markerSize, 1f), Vector3.zero);
+            CreateBar(marker.transform, 0f, new Vector3(0.18f, 0.18f, 1f),
+                Vector3.down * (markerSize * 0.72f));
             markers.Add(marker);
         }
 
-        private void CreateBar(Transform parent, float rotation)
+        private void CreateBar(
+            Transform parent, float rotation, Vector3 scale, Vector3 localPosition)
         {
             var bar = new GameObject("Warning Bar");
             bar.transform.SetParent(parent, false);
             bar.transform.localRotation = Quaternion.Euler(0f, 0f, rotation);
-            bar.transform.localScale = new Vector3(markerSize, 0.12f, 1f);
+            bar.transform.localScale = scale;
+            bar.transform.localPosition = localPosition;
             var renderer = bar.AddComponent<SpriteRenderer>();
             renderer.sprite = sharedSprite;
             renderer.color = warningColor;

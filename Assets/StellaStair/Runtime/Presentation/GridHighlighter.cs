@@ -34,16 +34,30 @@ namespace StellaStair.Presentation
         {
             Show(board, positions, selected);
             foreach (var position in attackPositions)
-                CreateMarker(board, position, attackColor);
+            {
+                if (board.IsWoodTile(position))
+                    CreateMarkerAtWorld(
+                        board.PositionToWorld(position), board, position, attackColor, 0.92f);
+                else
+                    CreateMarker(board, position, attackColor);
+            }
         }
 
         public void ShowAttackPreview(TacticalBoard board, GridPosition selected,
             GridPosition impact, IEnumerable<GridPosition> knockbackDestinations,
-            IEnumerable<GridPosition> collisionPositions, IEnumerable<GridPosition> voidPositions)
+            IEnumerable<GridPosition> collisionPositions, IEnumerable<GridPosition> voidPositions,
+            bool targetTerrain = false, int terrainPreviewDamage = 0)
         {
             Clear();
             EnsureSprite();
-            CreateMarker(board, impact, impactColor, 0.72f);
+            if (targetTerrain)
+            {
+                CreateMarkerAtWorld(board.PositionToWorld(impact), board, impact,
+                    impactColor, 0.72f);
+                CreateWoodHealthBar(board, impact, terrainPreviewDamage);
+            }
+            else
+                CreateMarker(board, impact, impactColor, 0.72f);
 
             foreach (var position in knockbackDestinations)
                 CreateMarker(board, position, knockbackColor, 0.68f);
@@ -58,6 +72,108 @@ namespace StellaStair.Presentation
             Clear();
             EnsureSprite();
             CreateMarker(board, destination, knockbackColor);
+        }
+
+        public void ShowWoodHealth(TacticalBoard board, GridPosition position)
+        {
+            Clear();
+            EnsureSprite();
+            CreateMarkerAtWorld(
+                board.PositionToWorld(position), board, position, selectedColor, 0.72f);
+            CreateWoodHealthBar(board, position);
+        }
+
+        private void CreateWoodHealthBar(
+            TacticalBoard board, GridPosition position, int previewDamage = 0)
+        {
+            var health = board.GetWoodHealth(position);
+            if (health <= 0)
+                return;
+
+            var ratio = Mathf.Clamp01(health / (float)board.WoodMaxHealth);
+            var damageRatio = Mathf.Min(Mathf.Max(0, previewDamage), health) /
+                              (float)board.WoodMaxHealth;
+            var remainingRatio = Mathf.Max(0f, ratio - damageRatio);
+            var root = new GameObject($"Wood Health {position}");
+            root.transform.SetParent(transform);
+            root.transform.position = board.PositionToWorld(position) +
+                                      Vector3.up * (board.Grid.cellSize.y * 0.65f);
+
+            var background = new GameObject("Background");
+            background.transform.SetParent(root.transform, false);
+            background.transform.localScale = new Vector3(0.86f, 0.14f, 1f);
+            var backgroundRenderer = background.AddComponent<SpriteRenderer>();
+            backgroundRenderer.sprite = markerSprite;
+            backgroundRenderer.color = new Color(0.08f, 0.08f, 0.08f, 0.92f);
+            backgroundRenderer.sortingOrder = sortingOrder + 20;
+
+            var fill = new GameObject("Fill");
+            fill.transform.SetParent(root.transform, false);
+            fill.transform.localScale = new Vector3(0.8f * remainingRatio, 0.09f, 1f);
+            fill.transform.localPosition = new Vector3(
+                -0.4f + 0.4f * remainingRatio, 0f, 0f);
+            var fillRenderer = fill.AddComponent<SpriteRenderer>();
+            fillRenderer.sprite = markerSprite;
+            fillRenderer.color = ratio > 0.5f
+                ? new Color(0.2f, 0.9f, 0.25f, 1f)
+                : new Color(0.95f, 0.15f, 0.12f, 1f);
+            fillRenderer.sortingOrder = sortingOrder + 21;
+
+            if (damageRatio > 0f)
+            {
+                var damage = new GameObject("Predicted Damage");
+                damage.transform.SetParent(root.transform, false);
+                damage.transform.localScale = new Vector3(0.8f * damageRatio, 0.09f, 1f);
+                damage.transform.localPosition = new Vector3(
+                    -0.4f + 0.8f * (remainingRatio + damageRatio * 0.5f), 0f, 0f);
+                var damageRenderer = damage.AddComponent<SpriteRenderer>();
+                damageRenderer.sprite = markerSprite;
+                damageRenderer.color = new Color(1f, 0.08f, 0.05f, 0.95f);
+                damageRenderer.sortingOrder = sortingOrder + 22;
+            }
+            markers.Add(root);
+        }
+
+        public void ShowEnemyIntentPreview(
+            TacticalBoard board,
+            GridPosition selected,
+            GridPosition moveDestination,
+            bool willMove,
+            GridPosition attackTarget,
+            bool willAttack,
+            IEnumerable<GridPosition> reachablePositions,
+            IEnumerable<GridPosition> attackablePositions,
+            IEnumerable<GridPosition> knockbackDestinations,
+            IEnumerable<GridPosition> collisionPositions,
+            IEnumerable<GridPosition> voidPositions)
+        {
+            Clear();
+            EnsureSprite();
+
+            var fadedReachableColor = reachableColor;
+            fadedReachableColor.a *= 0.5f;
+            foreach (var position in reachablePositions)
+            {
+                if (position != selected)
+                    CreateMarker(board, position, fadedReachableColor);
+            }
+
+            var fadedAttackColor = attackColor;
+            fadedAttackColor.a *= 0.45f;
+            foreach (var position in attackablePositions)
+                CreateMarker(board, position, fadedAttackColor);
+
+            CreateMarker(board, selected, selectedColor, 0.72f);
+            if (willMove)
+                CreateMarker(board, moveDestination, knockbackColor, 0.82f);
+            if (willAttack)
+                CreateMarker(board, attackTarget, impactColor, 0.72f);
+            foreach (var position in knockbackDestinations)
+                CreateMarker(board, position, knockbackColor, 0.68f);
+            foreach (var position in collisionPositions)
+                CreateCrossMarker(board, position, collisionColor);
+            foreach (var position in voidPositions)
+                CreateCrossMarker(board, position, voidColor);
         }
 
         public void Clear()
@@ -76,11 +192,19 @@ namespace StellaStair.Presentation
 
         private void CreateMarker(TacticalBoard board, GridPosition position, Color color, float scale = 0.92f)
         {
+            CreateMarkerAtWorld(
+                GetMarkerWorldPosition(board, position), board, position, color, scale);
+        }
+
+        private void CreateMarkerAtWorld(
+            Vector3 worldPosition, TacticalBoard board, GridPosition position,
+            Color color, float scale)
+        {
             var marker = new GameObject($"Highlight {position}");
             marker.transform.SetParent(transform);
             // Board positions represent solid floor cells. Draw the marker in the
             // standing cell directly above the floor instead of inside the tile.
-            marker.transform.position = board.PositionToStandingWorld(position);
+            marker.transform.position = worldPosition;
             marker.transform.localScale = board.Grid.cellSize * scale;
             var renderer = marker.AddComponent<SpriteRenderer>();
             renderer.sprite = markerSprite;
@@ -93,10 +217,16 @@ namespace StellaStair.Presentation
         {
             var marker = new GameObject($"Preview Cross {position}");
             marker.transform.SetParent(transform);
-            marker.transform.position = board.PositionToStandingWorld(position);
+            marker.transform.position = GetMarkerWorldPosition(board, position);
             CreateCrossBar(marker.transform, color, 45f);
             CreateCrossBar(marker.transform, color, -45f);
             markers.Add(marker);
+        }
+
+        private static Vector3 GetMarkerWorldPosition(
+            TacticalBoard board, GridPosition position)
+        {
+            return board.PositionToStandingWorld(position);
         }
 
         private void CreateCrossBar(Transform parent, Color color, float angle)

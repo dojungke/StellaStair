@@ -19,7 +19,7 @@ MonoBehaviour:
   <AttackDamage>k__BackingField: 1
   <AttackRange>k__BackingField: 1
   <VerticalAttackRange>k__BackingField: 1
-  <KnockbackDistance>k__BackingField: 0
+  <KnockbackDistance>k__BackingField: 1
   <CanPierceUnits>k__BackingField: 0
   <AreaKnockbackRadius>k__BackingField: 0
   <AreaKnockbackDistance>k__BackingField: 0

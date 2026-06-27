@@ -16,10 +16,20 @@ namespace StellaStair.Battle
         [SerializeField] private TacticalBoard board;
         [SerializeField] private List<TacticalUnit> playerUnits = new();
         [SerializeField] private List<TacticalUnit> enemyUnits = new();
+        [SerializeField] private TacticalStageType stageType = TacticalStageType.Elimination;
+        [SerializeField, Min(1)] private int defensiveObjectiveRadius = 4;
+        [SerializeField, Min(0)] private int defensiveMaxDistanceFromStart = 2;
+        [SerializeField, Min(1)] private int defenseTurnsToSurvive = 5;
         private readonly List<EnemyIntent> enemyIntents = new();
+        private readonly Dictionary<TacticalUnit, GridPosition> enemyStartPositions = new();
+        private Coroutine refreshEnemyIntentsRoutine;
+        private TacticalBoard subscribedBoard;
 
         public BattlePhase Phase { get; private set; } = BattlePhase.Deployment;
         public TacticalBoard Board => board;
+        public TacticalStageType StageType => stageType;
+        public int DefenseTurnsSurvived { get; private set; }
+        public int DefenseTurnsToSurvive => defenseTurnsToSurvive;
         public IReadOnlyList<TacticalUnit> PlayerUnits => playerUnits;
         public IReadOnlyList<TacticalUnit> EnemyUnits => enemyUnits;
         public IReadOnlyList<EnemyIntent> EnemyIntents => enemyIntents;
@@ -30,20 +40,35 @@ namespace StellaStair.Battle
         {
             if (GetComponent<EnemyIntentPresenter>() == null)
                 gameObject.AddComponent<EnemyIntentPresenter>();
+            SubscribeToBoardOccupancy();
         }
 
         public void Configure(TacticalBoard targetBoard, IEnumerable<TacticalUnit> players,
             IEnumerable<TacticalUnit> enemies = null)
         {
             board = targetBoard;
+            SubscribeToBoardOccupancy();
             playerUnits.Clear();
             playerUnits.AddRange(players);
             enemyUnits.Clear();
+            enemyStartPositions.Clear();
             if (enemies != null)
                 foreach (var enemy in enemies)
                     RegisterEnemy(enemy);
             foreach (var player in playerUnits)
                 Observe(player);
+            ObserveObjectives();
+        }
+
+        public void ConfigureStage(TacticalStageType type, int turnsToSurvive = 5)
+        {
+            stageType = type;
+            defenseTurnsToSurvive = Mathf.Max(1, turnsToSurvive);
+            DefenseTurnsSurvived = 0;
+            ObserveObjectives();
+            CheckBattleEnd();
+            if (Phase == BattlePhase.PlayerTurn)
+                GenerateEnemyIntents();
         }
 
         public bool RegisterEnemy(TacticalUnit enemy, GridPosition? startingPosition = null)
@@ -53,7 +78,10 @@ namespace StellaStair.Battle
             if (!enemyUnits.Contains(enemy))
                 enemyUnits.Add(enemy);
             Observe(enemy);
-            return !startingPosition.HasValue || enemy.TryPlace(board, startingPosition.Value, false);
+            var placed = !startingPosition.HasValue || enemy.TryPlace(board, startingPosition.Value, false);
+            if (placed && enemy.IsPlaced)
+                enemyStartPositions[enemy] = enemy.Position;
+            return placed;
         }
 
         public bool RegisterPlayer(TacticalUnit player)
@@ -104,8 +132,12 @@ namespace StellaStair.Battle
             {
                 if (enemy == null || !enemy.IsAlive)
                     continue;
+                CaptureEnemyStartPosition(enemy);
 
-                var target = FindNearestPlayer(enemy);
+                if (stageType == TacticalStageType.Attack)
+                    continue;
+
+                var target = FindEnemyTarget(enemy);
                 if (target == null)
                     continue;
 
@@ -138,6 +170,20 @@ namespace StellaStair.Battle
                     yield return enemy;
         }
 
+        public bool TryGetEnemyIntent(TacticalUnit enemy, out EnemyIntent intent)
+        {
+            foreach (var candidate in enemyIntents)
+            {
+                if (candidate.Enemy != enemy)
+                    continue;
+                intent = candidate;
+                return true;
+            }
+
+            intent = default;
+            return false;
+        }
+
         private IEnumerator EnemyTurnRoutine()
         {
             SetPhase(BattlePhase.EnemyTurn);
@@ -153,14 +199,14 @@ namespace StellaStair.Battle
                 if (enemy == null || !enemy.IsAlive || CheckBattleEnd())
                     continue;
 
-                if (intent.WillAttack && enemy.TryAttackPosition(intent.TargetPosition, true))
-                {
-                    while (enemy.IsAttacking) yield return null;
-                }
-
                 if (intent.WillMove && enemy.TryMoveTo(intent.MoveDestination))
                 {
                     while (enemy.IsMoving) yield return null;
+                }
+
+                if (intent.WillAttack && enemy.TryAttackPosition(intent.TargetPosition, true))
+                {
+                    while (enemy.IsAttacking) yield return null;
                 }
 
                 yield return new WaitForSeconds(0.2f);
@@ -168,6 +214,13 @@ namespace StellaStair.Battle
 
             if (CheckBattleEnd())
                 yield break;
+
+            if (stageType == TacticalStageType.Defense)
+            {
+                DefenseTurnsSurvived++;
+                if (CheckBattleEnd())
+                    yield break;
+            }
 
             BeginUnitsTurn(playerUnits);
             SetPhase(BattlePhase.PlayerTurn);
@@ -182,21 +235,37 @@ namespace StellaStair.Battle
             {
                 if (enemy == null || !enemy.IsAlive || !enemy.IsPlaced)
                     continue;
+                CaptureEnemyStartPosition(enemy);
 
-                var target = FindNearestPlayer(enemy);
+                if (stageType == TacticalStageType.Attack)
+                {
+                    if (!TryFindBestDefensiveAttack(
+                            enemy, reservedDestinations, out var defensiveTarget,
+                            out var defensiveDestination))
+                        continue;
+
+                    reservedDestinations.Add(defensiveDestination);
+                    enemyIntents.Add(new EnemyIntent(
+                        enemy, defensiveDestination, defensiveDestination,
+                        defensiveTarget.Position,
+                        defensiveDestination != enemy.Position, true));
+                    continue;
+                }
+
+                var target = FindEnemyTarget(enemy);
                 if (target == null)
                     continue;
 
-                var willAttack = enemy.IsPositionAttackableFrom(enemy.Position, target.Position);
                 var destination = enemy.Position;
-                var plannedMove = FindBestMove(
-                    enemy, target, reservedDestinations, allowEqualDistance: willAttack);
+                var plannedMove = FindBestMove(enemy, target, reservedDestinations);
                 if (plannedMove.HasValue)
                     destination = plannedMove.Value;
                 reservedDestinations.Add(destination);
 
+                var willAttack = enemy.IsPositionAttackableFrom(destination, target.Position);
+
                 enemyIntents.Add(new EnemyIntent(
-                    enemy, enemy.Position, destination, target.Position,
+                    enemy, destination, destination, target.Position,
                     destination != enemy.Position, willAttack));
             }
             EnemyIntentsChanged?.Invoke();
@@ -223,6 +292,150 @@ namespace StellaStair.Battle
                 best = pair.Key;
             }
             return best;
+        }
+
+        private bool TryFindBestDefensiveAttack(
+            TacticalUnit enemy,
+            HashSet<GridPosition> reservedDestinations,
+            out TacticalUnit target,
+            out GridPosition destination)
+        {
+            target = null;
+            destination = default;
+            if (enemy == null)
+                return false;
+
+            var start = GetEnemyStartPosition(enemy);
+            var reachable = GridPathfinder.FindReachable(
+                board, enemy.Position, enemy.MovementPoints, enemy);
+
+            var bestTravelCost = int.MaxValue;
+            var bestAnchorDistance = int.MaxValue;
+            var bestTargetDistance = int.MaxValue;
+            foreach (var pair in reachable)
+            {
+                var position = pair.Key;
+                if (reservedDestinations != null && reservedDestinations.Contains(position))
+                    continue;
+                if (position.ManhattanDistance(start) > defensiveMaxDistanceFromStart)
+                    continue;
+                foreach (var player in playerUnits)
+                {
+                    if (player == null || !player.IsAlive || !player.IsPlaced)
+                        continue;
+                    if (!enemy.IsPositionAttackableFrom(position, player.Position))
+                        continue;
+
+                    var anchorDistance = position.ManhattanDistance(start);
+                    var targetDistance = position.ManhattanDistance(player.Position);
+                    if (pair.Value > bestTravelCost ||
+                        pair.Value == bestTravelCost && anchorDistance > bestAnchorDistance ||
+                        pair.Value == bestTravelCost && anchorDistance == bestAnchorDistance &&
+                        targetDistance >= bestTargetDistance)
+                        continue;
+
+                    bestTravelCost = pair.Value;
+                    bestAnchorDistance = anchorDistance;
+                    bestTargetDistance = targetDistance;
+                    target = player;
+                    destination = position;
+                }
+            }
+
+            return target != null;
+        }
+
+        private GridPosition GetEnemyStartPosition(TacticalUnit enemy)
+        {
+            CaptureEnemyStartPosition(enemy);
+            return enemyStartPositions.TryGetValue(enemy, out var start)
+                ? start
+                : enemy.Position;
+        }
+
+        private void CaptureEnemyStartPosition(TacticalUnit enemy)
+        {
+            if (enemy == null || !enemy.IsPlaced || enemyStartPositions.ContainsKey(enemy))
+                return;
+            enemyStartPositions[enemy] = enemy.Position;
+        }
+
+        private TacticalUnit FindEnemyTarget(TacticalUnit enemy)
+        {
+            if (stageType == TacticalStageType.Defense)
+                return FindNearestLivingDefenseObjective(enemy.Position) ??
+                       FindNearestPlayer(enemy);
+
+            if (stageType != TacticalStageType.Attack)
+                return FindNearestPlayer(enemy);
+
+            var objective = FindNearestLivingObjective(enemy.Position);
+            if (objective == null)
+                return FindNearestPlayer(enemy);
+
+            TacticalUnit nearestThreat = null;
+            var bestThreatDistance = int.MaxValue;
+            foreach (var player in playerUnits)
+            {
+                if (player == null || !player.IsAlive || !player.IsPlaced)
+                    continue;
+
+                var playerToObjective = player.Position.ManhattanDistance(objective.Position);
+                var canAttackObjective = player.IsPositionAttackableFrom(player.Position, objective.Position);
+                if (playerToObjective > defensiveObjectiveRadius && !canAttackObjective)
+                    continue;
+
+                var enemyToPlayer = enemy.Position.ManhattanDistance(player.Position);
+                if (enemyToPlayer >= bestThreatDistance)
+                    continue;
+
+                bestThreatDistance = enemyToPlayer;
+                nearestThreat = player;
+            }
+
+            return nearestThreat;
+        }
+
+        private TacticalUnit FindNearestLivingObjective(GridPosition from)
+        {
+            if (board == null)
+                return null;
+
+            TacticalUnit nearest = null;
+            var bestDistance = int.MaxValue;
+            foreach (var objective in board.ObjectiveUnits)
+            {
+                if (objective == null || !objective.IsAlive || !objective.IsPlaced)
+                    continue;
+                var distance = from.ManhattanDistance(objective.Position);
+                if (distance >= bestDistance)
+                    continue;
+                bestDistance = distance;
+                nearest = objective;
+            }
+
+            return nearest;
+        }
+
+        private TacticalUnit FindNearestLivingDefenseObjective(GridPosition from)
+        {
+            if (board == null)
+                return null;
+
+            TacticalUnit nearest = null;
+            var bestDistance = int.MaxValue;
+            foreach (var objective in board.DefenseObjectiveUnits)
+            {
+                if (objective == null || !objective.IsAlive || !objective.IsPlaced)
+                    continue;
+                var distance = from.ManhattanDistance(objective.Position);
+                if (distance >= bestDistance)
+                    continue;
+                bestDistance = distance;
+                nearest = objective;
+            }
+
+            return nearest;
         }
 
         private TacticalUnit FindNearestPlayer(TacticalUnit enemy)
@@ -258,26 +471,60 @@ namespace StellaStair.Battle
             unit.MoveCompleted += OnUnitMoveCompleted;
         }
 
+        private void ObserveObjectives()
+        {
+            if (board == null)
+                return;
+            foreach (var objective in board.ObjectiveUnits)
+                Observe(objective);
+            foreach (var objective in board.DefenseObjectiveUnits)
+                Observe(objective);
+        }
+
         private void OnUnitMoveCompleted(TacticalUnit unit)
         {
-            if (Phase != BattlePhase.PlayerTurn || unit == null || unit.Team != UnitTeam.Enemy)
+            if (Phase != BattlePhase.PlayerTurn || unit == null)
                 return;
 
-            var changed = false;
-            for (var i = 0; i < enemyIntents.Count; i++)
-            {
-                if (enemyIntents[i].Enemy != unit)
-                    continue;
-                enemyIntents[i] = enemyIntents[i].ShiftAttackWithEnemy(unit.Position);
-                changed = true;
-            }
+            if (refreshEnemyIntentsRoutine == null)
+                refreshEnemyIntentsRoutine = StartCoroutine(RefreshEnemyIntentsAfterMovementRoutine());
+        }
 
-            if (changed)
-                EnemyIntentsChanged?.Invoke();
+        private void SubscribeToBoardOccupancy()
+        {
+            if (subscribedBoard == board)
+                return;
+            if (subscribedBoard != null)
+                subscribedBoard.OccupancyChanged -= OnBoardOccupancyChanged;
+            subscribedBoard = board;
+            if (subscribedBoard != null)
+                subscribedBoard.OccupancyChanged += OnBoardOccupancyChanged;
+        }
+
+        private void OnBoardOccupancyChanged()
+        {
+            if (Phase != BattlePhase.PlayerTurn || refreshEnemyIntentsRoutine != null)
+                return;
+            refreshEnemyIntentsRoutine = StartCoroutine(RefreshEnemyIntentsAfterMovementRoutine());
+        }
+
+        private IEnumerator RefreshEnemyIntentsAfterMovementRoutine()
+        {
+            // Let every simultaneous knockback/collision reserve its destination,
+            // then rebuild all intents from the final board state once.
+            yield return null;
+            while (board != null && board.HasUnitsResolvingForcedMovement())
+                yield return null;
+
+            refreshEnemyIntentsRoutine = null;
+            if (Phase == BattlePhase.PlayerTurn)
+                GenerateEnemyIntents();
         }
 
         private void OnUnitDied(TacticalUnit unit)
         {
+            if (unit != null)
+                enemyStartPositions.Remove(unit);
             enemyIntents.RemoveAll(intent => intent.Enemy == null || !intent.Enemy.IsAlive);
             EnemyIntentsChanged?.Invoke();
             CheckBattleEnd();
@@ -285,7 +532,29 @@ namespace StellaStair.Battle
 
         private bool CheckBattleEnd()
         {
-            if (!HasLivingUnit(enemyUnits))
+            if (stageType == TacticalStageType.Attack &&
+                (board == null || !HasLivingUnit(board.ObjectiveUnits)))
+            {
+                SetPhase(BattlePhase.Victory);
+                return true;
+            }
+
+            if (stageType == TacticalStageType.Defense)
+            {
+                if (board == null || !HasLivingUnit(board.DefenseObjectiveUnits))
+                {
+                    SetPhase(BattlePhase.Defeat);
+                    return true;
+                }
+
+                if (DefenseTurnsSurvived >= defenseTurnsToSurvive)
+                {
+                    SetPhase(BattlePhase.Victory);
+                    return true;
+                }
+            }
+
+            if (stageType == TacticalStageType.Elimination && !HasLivingUnit(enemyUnits))
             {
                 SetPhase(BattlePhase.Victory);
                 return true;
@@ -310,6 +579,12 @@ namespace StellaStair.Battle
         {
             Phase = phase;
             PhaseChanged?.Invoke(phase);
+        }
+
+        private void OnDestroy()
+        {
+            if (subscribedBoard != null)
+                subscribedBoard.OccupancyChanged -= OnBoardOccupancyChanged;
         }
     }
 }

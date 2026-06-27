@@ -16,7 +16,7 @@ MonoBehaviour:
   <MovementPoints>k__BackingField: 5
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 2
-  <AttackDamage>k__BackingField: 2
+  <AttackDamage>k__BackingField: 1
   <AttackRange>k__BackingField: 1
   <VerticalAttackRange>k__BackingField: 1
   <KnockbackDistance>k__BackingField: 0
