@@ -11,7 +11,7 @@ namespace StellaStair.Battle
     {
         [SerializeField] private UnitDefinition definition;
         [SerializeField] private Color enemyColor = new(0.9f, 0.18f, 0.12f);
-        [SerializeField] private Vector2 unitScale = new(0.75f, 1.25f);
+        [SerializeField] private Vector2 unitScale = new(1f, 1f);
 
         private Tilemap spawnTilemap;
 

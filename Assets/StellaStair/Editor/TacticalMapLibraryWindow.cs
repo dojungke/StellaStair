@@ -12,6 +12,7 @@ namespace StellaStair.Editor
     public sealed class TacticalMapLibraryWindow : EditorWindow
     {
         private TacticalMapData selectedMap;
+        private int selectedRoundIndex;
 
         [MenuItem("Stella Stair/Map Library")]
         private static void Open() =>
@@ -22,7 +23,7 @@ namespace StellaStair.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Tactical Map Library", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "현재 씬의 지형·오브젝트·적 스폰 타일을 Map Data로 저장하거나 불러옵니다.",
+                "현재 씬의 전술 맵 배치를 Map Data로 저장하거나 불러옵니다.",
                 MessageType.Info);
             selectedMap = (TacticalMapData)EditorGUILayout.ObjectField(
                 "Selected Map", selectedMap, typeof(TacticalMapData), false);
@@ -38,9 +39,10 @@ namespace StellaStair.Editor
                     Undo.RecordObject(selectedMap, "Change Stage Type");
                     selectedMap.stageType = stageType;
                     selectedMap.defenseTurnsToSurvive = Mathf.Max(1, defenseTurns);
-                    EditorUtility.SetDirty(selectedMap);
-                    AssetDatabase.SaveAssets();
+                    SaveSelectedMapAsset();
                 }
+
+                DrawRoundControls();
             }
 
             EditorGUILayout.Space();
@@ -55,6 +57,251 @@ namespace StellaStair.Editor
                 if (GUILayout.Button("Register Selected Map As Stage"))
                     RegisterSelectedStage();
             }
+        }
+
+        private void DrawRoundControls()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Rounds", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                $"Initial Map + {selectedMap.rounds.Count} extra round(s)",
+                EditorStyles.miniLabel);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("+ Add", GUILayout.Width(72)))
+                    AddRound(selectedMap.rounds.Count);
+                using (new EditorGUI.DisabledScope(selectedMap.rounds.Count == 0))
+                {
+                    if (GUILayout.Button("- Remove", GUILayout.Width(88)))
+                        RemoveSelectedRound();
+                    if (GUILayout.Button("Duplicate", GUILayout.Width(88)))
+                        DuplicateSelectedRound();
+                }
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUI.BeginChangeCheck();
+                var desiredCount = EditorGUILayout.IntField("Extra Round Count", selectedMap.rounds.Count);
+                if (EditorGUI.EndChangeCheck())
+                    SetRoundCount(Mathf.Max(0, desiredCount));
+
+                using (new EditorGUI.DisabledScope(selectedMap.rounds.Count == 0))
+                {
+                    if (GUILayout.Button("Up", GUILayout.Width(44)))
+                        MoveSelectedRound(-1);
+                    if (GUILayout.Button("Down", GUILayout.Width(56)))
+                        MoveSelectedRound(1);
+                }
+            }
+
+            if (selectedMap.rounds.Count == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "No extra rounds. Add a round, then save the current scene map into it.",
+                    MessageType.Info);
+                return;
+            }
+
+            selectedRoundIndex = ClampRoundIndex(selectedRoundIndex);
+            var names = new string[selectedMap.rounds.Count];
+            for (var i = 0; i < names.Length; i++)
+                names[i] = GetRoundDisplayName(i, selectedMap.rounds[i]);
+            selectedRoundIndex = EditorGUILayout.Popup("Selected Round", selectedRoundIndex, names);
+            var round = selectedMap.rounds[selectedRoundIndex];
+
+            EditorGUI.BeginChangeCheck();
+            var roundName = EditorGUILayout.TextField("Round Name", round.roundName);
+            var condition = (RoundStartCondition)EditorGUILayout.EnumPopup(
+                "Start Condition", round.startCondition);
+            var startTurn = EditorGUILayout.IntField("Start Turn", round.startTurn);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(selectedMap, "Edit Tactical Round");
+                round.roundName = roundName;
+                round.startCondition = condition;
+                round.startTurn = Mathf.Max(1, startTurn);
+                SaveSelectedMapAsset();
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Save Current Map To Round"))
+                    SaveCurrentMapToRound(round);
+                if (GUILayout.Button("Load Round Into Scene"))
+                    LoadRoundIntoScene(round);
+            }
+        }
+
+        private void AddRound(int insertIndex)
+        {
+            Undo.RecordObject(selectedMap, "Add Tactical Round");
+            insertIndex = Mathf.Clamp(insertIndex, 0, selectedMap.rounds.Count);
+            selectedMap.rounds.Insert(insertIndex, CreateDefaultRound(insertIndex));
+            selectedRoundIndex = insertIndex;
+            SaveSelectedMapAsset();
+        }
+
+        private void RemoveSelectedRound()
+        {
+            if (selectedMap.rounds.Count == 0)
+                return;
+            selectedRoundIndex = ClampRoundIndex(selectedRoundIndex);
+            var round = selectedMap.rounds[selectedRoundIndex];
+            if (!EditorUtility.DisplayDialog(
+                    "Remove Round",
+                    $"Remove '{GetRoundDisplayName(selectedRoundIndex, round)}'?",
+                    "Remove", "Cancel"))
+                return;
+
+            Undo.RecordObject(selectedMap, "Remove Tactical Round");
+            selectedMap.rounds.RemoveAt(selectedRoundIndex);
+            selectedRoundIndex = ClampRoundIndex(selectedRoundIndex);
+            SaveSelectedMapAsset();
+        }
+
+        private void DuplicateSelectedRound()
+        {
+            if (selectedMap.rounds.Count == 0)
+                return;
+            selectedRoundIndex = ClampRoundIndex(selectedRoundIndex);
+            Undo.RecordObject(selectedMap, "Duplicate Tactical Round");
+            var clone = CloneRound(selectedMap.rounds[selectedRoundIndex]);
+            clone.roundName = $"{GetRoundDisplayName(selectedRoundIndex, clone)} Copy";
+            var insertIndex = selectedRoundIndex + 1;
+            selectedMap.rounds.Insert(insertIndex, clone);
+            selectedRoundIndex = insertIndex;
+            SaveSelectedMapAsset();
+        }
+
+        private void MoveSelectedRound(int direction)
+        {
+            if (selectedMap.rounds.Count == 0)
+                return;
+            var oldIndex = Mathf.Clamp(selectedRoundIndex, 0, selectedMap.rounds.Count - 1);
+            var newIndex = Mathf.Clamp(oldIndex + direction, 0, selectedMap.rounds.Count - 1);
+            if (oldIndex == newIndex)
+                return;
+
+            Undo.RecordObject(selectedMap, "Move Tactical Round");
+            var round = selectedMap.rounds[oldIndex];
+            selectedMap.rounds.RemoveAt(oldIndex);
+            selectedMap.rounds.Insert(newIndex, round);
+            selectedRoundIndex = newIndex;
+            SaveSelectedMapAsset();
+        }
+
+        private void SetRoundCount(int desiredCount)
+        {
+            if (selectedMap.rounds.Count == desiredCount)
+                return;
+
+            Undo.RecordObject(selectedMap, "Set Tactical Round Count");
+            while (selectedMap.rounds.Count < desiredCount)
+                selectedMap.rounds.Add(CreateDefaultRound(selectedMap.rounds.Count));
+            while (selectedMap.rounds.Count > desiredCount)
+                selectedMap.rounds.RemoveAt(selectedMap.rounds.Count - 1);
+            selectedRoundIndex = ClampRoundIndex(selectedRoundIndex);
+            SaveSelectedMapAsset();
+        }
+
+        private int ClampRoundIndex(int index)
+        {
+            return selectedMap.rounds.Count == 0
+                ? 0
+                : Mathf.Clamp(index, 0, selectedMap.rounds.Count - 1);
+        }
+
+        private TacticalMapData.Round CreateDefaultRound(int index)
+        {
+            var round = new TacticalMapData.Round
+            {
+                roundName = $"Round {index + 2}",
+                startCondition = RoundStartCondition.EnemiesDefeated,
+                startTurn = index + 2
+            };
+            CopySelectedMapToRound(round);
+            return round;
+        }
+
+        private void CopySelectedMapToRound(TacticalMapData.Round round)
+        {
+            if (selectedMap == null || round == null)
+                return;
+            CopyCells(selectedMap.walkable, round.walkable);
+            CopyCells(selectedMap.playerDeployment, round.playerDeployment);
+            CopyCells(selectedMap.ladders, round.ladders);
+            CopyCells(selectedMap.wood, round.wood);
+        }
+
+        private static TacticalMapData.Round CloneRound(TacticalMapData.Round source)
+        {
+            var clone = new TacticalMapData.Round
+            {
+                roundName = source.roundName,
+                startCondition = source.startCondition,
+                startTurn = source.startTurn
+            };
+            CopyCells(source.walkable, clone.walkable);
+            CopyCells(source.playerDeployment, clone.playerDeployment);
+            CopyCells(source.ladders, clone.ladders);
+            CopyCells(source.wood, clone.wood);
+            CopyCells(source.crates, clone.crates);
+            CopyCells(source.bombCrates, clone.bombCrates);
+            CopyCells(source.objectiveTargets, clone.objectiveTargets);
+            CopyCells(source.defenseObjectives, clone.defenseObjectives);
+            CopyCells(source.enemyGuardSpawns, clone.enemyGuardSpawns);
+            CopyCells(source.enemySoldierSpawns, clone.enemySoldierSpawns);
+            return clone;
+        }
+
+        private static void CopyCells(
+            List<TacticalMapData.Cell> source,
+            List<TacticalMapData.Cell> destination)
+        {
+            destination.Clear();
+            if (source == null)
+                return;
+            foreach (var cell in source)
+            {
+                if (cell == null)
+                    continue;
+                destination.Add(new TacticalMapData.Cell
+                {
+                    position = cell.position,
+                    tile = cell.tile,
+                    color = cell.color
+                });
+            }
+        }
+
+        private static void RemoveBaseMapCells(
+            List<TacticalMapData.Cell> roundCells,
+            List<TacticalMapData.Cell> baseCells)
+        {
+            if (roundCells == null || baseCells == null || baseCells.Count == 0)
+                return;
+
+            var basePositions = new HashSet<Vector3Int>();
+            foreach (var cell in baseCells)
+                if (cell != null && cell.tile != null)
+                    basePositions.Add(cell.position);
+
+            roundCells.RemoveAll(cell => cell == null || basePositions.Contains(cell.position));
+        }
+
+        private static string GetRoundDisplayName(int index, TacticalMapData.Round round)
+        {
+            return round == null || string.IsNullOrEmpty(round.roundName)
+                ? $"Round {index + 2}"
+                : round.roundName;
+        }
+
+        private void SaveSelectedMapAsset()
+        {
+            EditorUtility.SetDirty(selectedMap);
+            AssetDatabase.SaveAssets();
         }
 
         private void SaveAsNew()
@@ -108,6 +355,69 @@ namespace StellaStair.Editor
             Debug.Log($"Map saved: {AssetDatabase.GetAssetPath(map)}");
         }
 
+        private void SaveCurrentMapToRound(TacticalMapData.Round round)
+        {
+            var board = FindBoard();
+            if (board == null || round == null || selectedMap == null)
+                return;
+
+            Capture(board.WalkableTilemap, round.walkable);
+            Capture(board.PlayerDeploymentTilemap, round.playerDeployment);
+            Capture(board.LadderTilemap, round.ladders);
+            Capture(board.WoodTilemap, round.wood);
+            Capture(board.CrateTilemap, round.crates);
+            Capture(board.BombCrateTilemap, round.bombCrates);
+            Capture(board.ObjectiveTilemap, round.objectiveTargets);
+            Capture(board.DefenseObjectiveTilemap, round.defenseObjectives);
+            Capture(FindLayer(board, "Enemy Guard Spawns"), round.enemyGuardSpawns);
+            Capture(FindLayer(board, "Enemy Soldier Spawns"), round.enemySoldierSpawns);
+            RemoveBaseMapCells(round.enemyGuardSpawns, selectedMap.enemyGuardSpawns);
+            RemoveBaseMapCells(round.enemySoldierSpawns, selectedMap.enemySoldierSpawns);
+
+            SaveSelectedMapAsset();
+            Debug.Log($"Round saved: {selectedMap.name} / {round.roundName}");
+        }
+
+        private void LoadRoundIntoScene(TacticalMapData.Round round)
+        {
+            var board = FindBoard();
+            if (board == null || round == null)
+                return;
+            if (!EditorUtility.DisplayDialog(
+                    "Load Tactical Round",
+                    "현재 씬의 배치를 선택한 라운드 맵으로 교체할까요?",
+                    "Load", "Cancel"))
+                return;
+
+            Restore(board.WalkableTilemap, round.walkable);
+            Restore(board.PlayerDeploymentTilemap, round.playerDeployment);
+            Restore(board.LadderTilemap, round.ladders);
+            Restore(board.WoodTilemap, round.wood);
+            var crateLayer = board.CrateTilemap != null || round.crates.Count > 0
+                ? EnsureLayer(board, "Crates", 18)
+                : null;
+            Restore(crateLayer, round.crates);
+            var bombCrateLayer = board.BombCrateTilemap != null || round.bombCrates.Count > 0
+                ? EnsureLayer(board, "Bomb Crates", 19)
+                : null;
+            Restore(bombCrateLayer, round.bombCrates);
+            var objectiveLayer = board.ObjectiveTilemap != null || round.objectiveTargets.Count > 0
+                ? EnsureLayer(board, "Attack Objectives", 20)
+                : null;
+            Restore(objectiveLayer, round.objectiveTargets);
+            var defenseObjectiveLayer = board.DefenseObjectiveTilemap != null ||
+                                        round.defenseObjectives.Count > 0
+                ? EnsureLayer(board, "Defense Objectives", 20)
+                : null;
+            Restore(defenseObjectiveLayer, round.defenseObjectives);
+            Restore(EnsureLayer(board, "Enemy Guard Spawns", 21), round.enemyGuardSpawns);
+            Restore(EnsureLayer(board, "Enemy Soldier Spawns", 21), round.enemySoldierSpawns);
+
+            EditorSceneManager.MarkSceneDirty(board.gameObject.scene);
+            SceneView.RepaintAll();
+            Debug.Log($"Round loaded: {round.roundName}");
+        }
+
         private void LoadSelected()
         {
             var board = FindBoard();
@@ -115,7 +425,7 @@ namespace StellaStair.Editor
                 return;
             if (!EditorUtility.DisplayDialog(
                     "Load Tactical Map",
-                    "현재 타일 배치를 선택한 맵으로 교체할까요?",
+                    "현재 씬의 배치를 선택한 맵으로 교체할까요?",
                     "Load", "Cancel"))
                 return;
 
@@ -123,8 +433,14 @@ namespace StellaStair.Editor
             Restore(board.PlayerDeploymentTilemap, selectedMap.playerDeployment);
             Restore(board.LadderTilemap, selectedMap.ladders);
             Restore(board.WoodTilemap, selectedMap.wood);
-            Restore(board.CrateTilemap, selectedMap.crates);
-            Restore(board.BombCrateTilemap, selectedMap.bombCrates);
+            var crateLayer = board.CrateTilemap != null || selectedMap.crates.Count > 0
+                ? EnsureLayer(board, "Crates", 18)
+                : null;
+            Restore(crateLayer, selectedMap.crates);
+            var bombCrateLayer = board.BombCrateTilemap != null || selectedMap.bombCrates.Count > 0
+                ? EnsureLayer(board, "Bomb Crates", 19)
+                : null;
+            Restore(bombCrateLayer, selectedMap.bombCrates);
             var objectiveLayer = board.ObjectiveTilemap != null || selectedMap.objectiveTargets.Count > 0
                 ? EnsureLayer(board, "Attack Objectives", 20)
                 : null;
@@ -134,8 +450,8 @@ namespace StellaStair.Editor
                 ? EnsureLayer(board, "Defense Objectives", 20)
                 : null;
             Restore(defenseObjectiveLayer, selectedMap.defenseObjectives);
-            Restore(FindLayer(board, "Enemy Guard Spawns"), selectedMap.enemyGuardSpawns);
-            Restore(FindLayer(board, "Enemy Soldier Spawns"), selectedMap.enemySoldierSpawns);
+            Restore(EnsureLayer(board, "Enemy Guard Spawns", 21), selectedMap.enemyGuardSpawns);
+            Restore(EnsureLayer(board, "Enemy Soldier Spawns", 21), selectedMap.enemySoldierSpawns);
 
             EditorSceneManager.MarkSceneDirty(board.gameObject.scene);
             SceneView.RepaintAll();
@@ -188,6 +504,10 @@ namespace StellaStair.Editor
             gameObject.transform.SetParent(board.Grid.transform, false);
             gameObject.GetComponent<TilemapRenderer>().sortingOrder = sortingOrder;
             var tilemap = gameObject.GetComponent<Tilemap>();
+            if (name == "Crates")
+                board.ConfigureCrates(tilemap);
+            if (name == "Bomb Crates")
+                board.ConfigureBombCrates(tilemap);
             if (name == "Attack Objectives")
                 board.ConfigureObjectives(tilemap, board.ObjectiveMaxHealth);
             if (name == "Defense Objectives")
@@ -196,8 +516,7 @@ namespace StellaStair.Editor
             return tilemap;
         }
 
-        private static void Capture(
-            Tilemap tilemap, List<TacticalMapData.Cell> destination)
+        private static void Capture(Tilemap tilemap, List<TacticalMapData.Cell> destination)
         {
             destination.Clear();
             if (tilemap == null)
@@ -216,8 +535,7 @@ namespace StellaStair.Editor
             }
         }
 
-        private static void Restore(
-            Tilemap tilemap, List<TacticalMapData.Cell> source)
+        private static void Restore(Tilemap tilemap, List<TacticalMapData.Cell> source)
         {
             if (tilemap == null)
                 return;
@@ -233,6 +551,5 @@ namespace StellaStair.Editor
             }
             EditorUtility.SetDirty(tilemap);
         }
-
     }
 }

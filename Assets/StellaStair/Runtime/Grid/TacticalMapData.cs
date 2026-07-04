@@ -34,6 +34,24 @@ namespace StellaStair.Grid
             public string tmpText;
         }
 
+        [Serializable]
+        public sealed class Round
+        {
+            public string roundName = "New Round";
+            public RoundStartCondition startCondition = RoundStartCondition.EnemiesDefeated;
+            [Min(1)] public int startTurn = 2;
+            public List<Cell> walkable = new();
+            public List<Cell> playerDeployment = new();
+            public List<Cell> ladders = new();
+            public List<Cell> wood = new();
+            public List<Cell> crates = new();
+            public List<Cell> bombCrates = new();
+            public List<Cell> objectiveTargets = new();
+            public List<Cell> defenseObjectives = new();
+            public List<Cell> enemyGuardSpawns = new();
+            public List<Cell> enemySoldierSpawns = new();
+        }
+
         public List<Cell> walkable = new();
         public List<Cell> playerDeployment = new();
         public List<Cell> ladders = new();
@@ -45,8 +63,10 @@ namespace StellaStair.Grid
         public List<Cell> enemyGuardSpawns = new();
         public List<Cell> enemySoldierSpawns = new();
         public List<UiElement> uiElements = new();
+        public List<Round> rounds = new();
         public TacticalStageType stageType = TacticalStageType.Elimination;
         [Min(1)] public int defenseTurnsToSurvive = 5;
+        private static readonly List<Cell> EmptyCells = new();
 
         public void ApplyTo(TacticalBoard board)
         {
@@ -56,18 +76,37 @@ namespace StellaStair.Grid
             Restore(board.PlayerDeploymentTilemap, playerDeployment);
             Restore(board.LadderTilemap, ladders);
             Restore(board.WoodTilemap, wood);
-            Restore(board.CrateTilemap, crates);
-            Restore(board.BombCrateTilemap, bombCrates);
+            var crateLayer = board.CrateTilemap;
+            if (crateLayer == null && crates.Count > 0)
+                crateLayer = CreateLayer(board, "Crates", 18);
+            Restore(crateLayer, crates);
+            var bombCrateLayer = board.BombCrateTilemap;
+            if (bombCrateLayer == null && bombCrates.Count > 0)
+                bombCrateLayer = CreateLayer(board, "Bomb Crates", 19);
+            Restore(bombCrateLayer, bombCrates);
             var objectiveLayer = board.ObjectiveTilemap;
             if (objectiveLayer == null && objectiveTargets.Count > 0)
                 objectiveLayer = CreateLayer(board, "Attack Objectives", 20);
             Restore(objectiveLayer, objectiveTargets);
             var defenseObjectiveLayer = board.DefenseObjectiveTilemap;
-            if (defenseObjectiveLayer == null && defenseObjectives.Count > 0)
-                defenseObjectiveLayer = CreateLayer(board, "Defense Objectives", 20);
-            Restore(defenseObjectiveLayer, defenseObjectives);
-            Restore(FindLayer(board, "Enemy Guard Spawns"), enemyGuardSpawns);
-            Restore(FindLayer(board, "Enemy Soldier Spawns"), enemySoldierSpawns);
+            if (stageType == TacticalStageType.Defense)
+            {
+                if (defenseObjectiveLayer == null && defenseObjectives.Count > 0)
+                    defenseObjectiveLayer = CreateLayer(board, "Defense Objectives", 20);
+                Restore(defenseObjectiveLayer, defenseObjectives);
+            }
+            else
+            {
+                Restore(defenseObjectiveLayer, EmptyCells);
+            }
+            var enemyGuardLayer = FindLayer(board, "Enemy Guard Spawns");
+            if (enemyGuardLayer == null && enemyGuardSpawns.Count > 0)
+                enemyGuardLayer = CreateLayer(board, "Enemy Guard Spawns", 21);
+            Restore(enemyGuardLayer, enemyGuardSpawns);
+            var enemySoldierLayer = FindLayer(board, "Enemy Soldier Spawns");
+            if (enemySoldierLayer == null && enemySoldierSpawns.Count > 0)
+                enemySoldierLayer = CreateLayer(board, "Enemy Soldier Spawns", 21);
+            Restore(enemySoldierLayer, enemySoldierSpawns);
         }
 
         public void ApplyUi()
@@ -129,6 +168,10 @@ namespace StellaStair.Grid
             gameObject.transform.SetParent(board.Grid.transform, false);
             gameObject.GetComponent<TilemapRenderer>().sortingOrder = sortingOrder;
             var tilemap = gameObject.GetComponent<Tilemap>();
+            if (layerName == "Crates")
+                board.ConfigureCrates(tilemap);
+            if (layerName == "Bomb Crates")
+                board.ConfigureBombCrates(tilemap);
             if (layerName == "Attack Objectives")
                 board.ConfigureObjectives(tilemap, board.ObjectiveMaxHealth);
             if (layerName == "Defense Objectives")

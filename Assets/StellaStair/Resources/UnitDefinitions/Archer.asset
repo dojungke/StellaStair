@@ -17,9 +17,17 @@ MonoBehaviour:
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 3
   <AttackDamage>k__BackingField: 1
+  <AttackDistanceRule>k__BackingField: 1
+  <MinimumAttackRange>k__BackingField: 2
   <AttackRange>k__BackingField: 4
   <VerticalAttackRange>k__BackingField: 2
   <KnockbackDistance>k__BackingField: 1
-  <CanPierceUnits>k__BackingField: 0
+  <CanPierceUnits>k__BackingField: 1
   <AreaKnockbackRadius>k__BackingField: 0
   <AreaKnockbackDistance>k__BackingField: 0
+  <AnimationPrefab>k__BackingField: {fileID: 0}
+  <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
+  <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}
+  <UnitWidthInCells>k__BackingField: 0.8
+  <UnitHeightInCells>k__BackingField: 1.2
+  <DefaultFacingDirection>k__BackingField: 1

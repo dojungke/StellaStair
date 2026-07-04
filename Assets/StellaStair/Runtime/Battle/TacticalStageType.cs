@@ -6,4 +6,10 @@ namespace StellaStair.Battle
         Attack,
         Defense
     }
+
+    public enum RoundStartCondition
+    {
+        EnemiesDefeated,
+        TurnStart
+    }
 }

@@ -133,6 +133,7 @@ MonoBehaviour:
   - position: {x: 7, y: 5, z: 0}
     tile: {fileID: 11400000, guid: 581ff09539e4475da76bc0621135807d, type: 2}
     color: {r: 1, g: 0.82, b: 0.12, a: 1}
+  defenseObjectives: []
   enemyGuardSpawns:
   - position: {x: -1, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 3c0a0ea0b3c0e4643a3ce3aeacc21d6a, type: 2}
@@ -145,4 +146,139 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
     color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
   uiElements: []
+  rounds:
+  - roundName: Round 2
+    startCondition: 1
+    startTurn: 2
+    walkable:
+    - position: {x: -8, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -7, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -6, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -5, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -4, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -3, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -2, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: -1, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 0, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 1, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 2, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 3, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 4, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 5, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 6, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 7, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    - position: {x: 8, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
+      color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    playerDeployment:
+    - position: {x: -7, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
+      color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
+    - position: {x: -6, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
+      color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
+    - position: {x: -5, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
+      color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
+    - position: {x: -4, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
+      color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
+    - position: {x: -3, y: 0, z: 0}
+      tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
+      color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
+    ladders:
+    - position: {x: 1, y: 1, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 6, y: 1, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 1, y: 2, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 6, y: 2, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 1, y: 3, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 6, y: 3, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 1, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    - position: {x: 6, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
+      color: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    wood:
+    - position: {x: 0, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - position: {x: 2, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - position: {x: 3, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - position: {x: 4, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - position: {x: 5, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - position: {x: 7, y: 4, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    crates:
+    - position: {x: 4, y: 5, z: 0}
+      tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+      color: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    bombCrates: []
+    objectiveTargets: []
+    defenseObjectives: []
+    enemyGuardSpawns:
+    - position: {x: -1, y: 1, z: 0}
+      tile: {fileID: 11400000, guid: 3c0a0ea0b3c0e4643a3ce3aeacc21d6a, type: 2}
+      color: {r: 0.95, g: 0.25, b: 0.22, a: 0.75}
+    enemySoldierSpawns:
+    - position: {x: 4, y: 1, z: 0}
+      tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
+      color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
+    - position: {x: 2, y: 5, z: 0}
+      tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
+      color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
   stageType: 1
+  defenseTurnsToSurvive: 5

@@ -20,6 +20,7 @@ namespace StellaStair.Grid
         [SerializeField] private Tilemap bombCrateTilemap;
         [SerializeField] private Tilemap objectiveTilemap;
         [SerializeField] private Tilemap defenseObjectiveTilemap;
+        [SerializeField] private TacticalObjectDatabase objectDatabase;
         [SerializeField, Min(1)] private int woodMaxHealth = 2;
         [SerializeField, Min(1)] private int objectiveMaxHealth = 8;
         [SerializeField, Min(1)] private int defenseObjectiveMaxHealth = 12;
@@ -44,9 +45,25 @@ namespace StellaStair.Grid
         public Tilemap BombCrateTilemap => bombCrateTilemap;
         public Tilemap ObjectiveTilemap => objectiveTilemap;
         public Tilemap DefenseObjectiveTilemap => defenseObjectiveTilemap;
-        public int WoodMaxHealth => woodMaxHealth;
-        public int ObjectiveMaxHealth => objectiveMaxHealth;
-        public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth;
+        public TacticalObjectDatabase ObjectDatabase => objectDatabase;
+        public int WoodMaxHealth => objectDatabase != null
+            ? objectDatabase.WoodMaxHealth
+            : woodMaxHealth;
+        public int CrateMaxHealth => objectDatabase != null
+            ? objectDatabase.CrateMaxHealth
+            : 2;
+        public int BombCrateMaxHealth => objectDatabase != null
+            ? objectDatabase.BombCrateMaxHealth
+            : 1;
+        public int BombCrateExplosionDamage => objectDatabase != null
+            ? objectDatabase.BombCrateExplosionDamage
+            : 3;
+        public int ObjectiveMaxHealth => objectDatabase != null
+            ? objectDatabase.AttackObjectiveMaxHealth
+            : objectiveMaxHealth;
+        public int DefenseObjectiveMaxHealth => objectDatabase != null
+            ? objectDatabase.DefenseObjectiveMaxHealth
+            : defenseObjectiveMaxHealth;
         public IReadOnlyList<TacticalUnit> ObjectiveUnits => objectiveUnits;
         public IReadOnlyList<TacticalUnit> DefenseObjectiveUnits => defenseObjectiveUnits;
 
@@ -57,10 +74,7 @@ namespace StellaStair.Grid
             InitializeWoodHealth();
             SpawnCratesFromTilemap(crateTilemap, false);
             SpawnCratesFromTilemap(bombCrateTilemap, true);
-            SpawnObjectivesFromTilemap(objectiveTilemap, objectiveUnits, "Attack Objective", objectiveMaxHealth);
-            SpawnObjectivesFromTilemap(
-                defenseObjectiveTilemap, defenseObjectiveUnits,
-                "Defense Objective", defenseObjectiveMaxHealth);
+            SpawnObjectivesFromTilemap(objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
         }
 
         public void Configure(UnityEngine.Grid targetGrid, Tilemap walkable, Tilemap deployment)
@@ -68,6 +82,11 @@ namespace StellaStair.Grid
             grid = targetGrid;
             walkableTilemap = walkable;
             playerDeploymentTilemap = deployment;
+        }
+
+        public void ConfigureObjectDatabase(TacticalObjectDatabase database)
+        {
+            objectDatabase = database;
         }
 
         public void ConfigureLadder(Tilemap ladders) => ladderTilemap = ladders;
@@ -99,17 +118,33 @@ namespace StellaStair.Grid
             objectiveMaxHealth = Mathf.Max(1, maxHealth);
             if (Application.isPlaying)
                 SpawnObjectivesFromTilemap(
-                    objectiveTilemap, objectiveUnits, "Attack Objective", objectiveMaxHealth);
+                    objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
         }
 
         public void ConfigureDefenseObjectives(Tilemap objectives, int maxHealth = 12)
         {
             defenseObjectiveTilemap = objectives;
             defenseObjectiveMaxHealth = Mathf.Max(1, maxHealth);
-            if (Application.isPlaying)
-                SpawnObjectivesFromTilemap(
-                    defenseObjectiveTilemap, defenseObjectiveUnits,
-                    "Defense Objective", defenseObjectiveMaxHealth);
+        }
+
+        public void SpawnRuntimeMarkers()
+        {
+            SpawnCrateMarkers();
+            SpawnObjectivesFromTilemap(
+                objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
+        }
+
+        public void SpawnCrateMarkers()
+        {
+            SpawnCratesFromTilemap(crateTilemap, false);
+            SpawnCratesFromTilemap(bombCrateTilemap, true);
+        }
+
+        public void SpawnDefenseObjectiveMarkers()
+        {
+            SpawnObjectivesFromTilemap(
+                defenseObjectiveTilemap, defenseObjectiveUnits,
+                "Defense Objective", DefenseObjectiveMaxHealth);
         }
 
         private void SpawnCratesFromTilemap(Tilemap source, bool explosive)
@@ -124,8 +159,9 @@ namespace StellaStair.Grid
 
             foreach (var cell in crateCells)
             {
-                var position = new GridPosition(cell.x, cell.y - 1);
-                if (!CanEnter(position))
+                if (!TryGetCrateSpawnPosition(
+                        cell, out var spawnPosition, out var position,
+                        out var fallDistance, out var landingType, out var blockingUnit))
                     continue;
 
                 var crateObject = new GameObject(
@@ -138,11 +174,149 @@ namespace StellaStair.Grid
                 renderer.sortingOrder = 18;
                 crateObject.GetComponent<BoxCollider2D>().size = Vector2.one;
                 var crate = crateObject.AddComponent<TacticalUnit>();
-                crate.ConfigureAsCrate(explosive ? 1 : 2, explosive, 3);
-                if (crate.TryPlace(this, position, false))
+                crate.ConfigureAsCrate(
+                    explosive ? BombCrateMaxHealth : CrateMaxHealth,
+                    explosive, BombCrateExplosionDamage);
+
+                if (landingType == KnockbackLandingType.Collision && blockingUnit != null)
+                {
+                    var startWorld = PositionToStandingWorld(spawnPosition);
+                    crate.PrepareUnoccupiedSpawnFall(this, position, startWorld);
+                    StartCoroutine(CrateSpawnCollisionFallRoutine(
+                        crate, startWorld, PositionToStandingWorld(position), fallDistance, blockingUnit));
                     source.SetTile(cell, null);
+                }
+                else if (crate.TryPlace(this, position, false))
+                {
+                    if (fallDistance > 0)
+                        StartCoroutine(CrateSpawnFallRoutine(crate, spawnPosition, position, fallDistance));
+                    source.SetTile(cell, null);
+                }
                 else
+                {
                     Destroy(crateObject);
+                }
+            }
+        }
+
+        private bool TryGetCrateSpawnPosition(
+            Vector3Int cell, out GridPosition spawnPosition,
+            out GridPosition landingPosition, out int fallDistance,
+            out KnockbackLandingType landingType, out TacticalUnit blockingUnit)
+        {
+            spawnPosition = new GridPosition(cell.x, cell.y - 1);
+            landingPosition = spawnPosition;
+            fallDistance = 0;
+            landingType = KnockbackLandingType.Landing;
+            blockingUnit = null;
+
+            if (CanEnter(spawnPosition))
+                return true;
+
+            if (TryGetOccupant(spawnPosition, out blockingUnit) &&
+                blockingUnit != null && blockingUnit.IsAlive)
+            {
+                landingType = KnockbackLandingType.Collision;
+                landingPosition = spawnPosition;
+                return true;
+            }
+
+            if (IsWalkable(spawnPosition))
+                return false;
+
+            landingType = ResolveVerticalFall(
+                spawnPosition, null, out landingPosition, out fallDistance, out blockingUnit);
+            return landingType == KnockbackLandingType.Landing && CanEnter(landingPosition) ||
+                   landingType == KnockbackLandingType.Collision &&
+                   blockingUnit != null && blockingUnit.IsAlive;
+        }
+
+        private IEnumerator CrateSpawnFallRoutine(
+            TacticalUnit crate, GridPosition spawnPosition,
+            GridPosition landingPosition, int fallDistance)
+        {
+            if (crate == null)
+                yield break;
+
+            var start = PositionToStandingWorld(spawnPosition);
+            var end = PositionToStandingWorld(landingPosition);
+            crate.transform.position = start;
+            crate.BeginExternalForcedMovement();
+
+            try
+            {
+                var distance = Vector3.Distance(start, end);
+                var duration = Mathf.Max(0.08f, distance / 5f);
+                var elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    if (crate == null || !crate.IsAlive)
+                        yield break;
+                    elapsed += Time.deltaTime;
+                    crate.transform.position = Vector3.Lerp(
+                        start, end, Mathf.SmoothStep(0f, 1f, elapsed / duration));
+                    yield return null;
+                }
+
+                if (crate == null || !crate.IsAlive)
+                    yield break;
+
+                crate.transform.position = end;
+                var fallDamage = Mathf.Min(crate.MaxHealth, Mathf.Max(0, fallDistance - 1));
+                if (fallDamage > 0)
+                    crate.TakeDamage(fallDamage);
+            }
+            finally
+            {
+                if (crate != null)
+                    crate.EndExternalForcedMovement();
+            }
+        }
+
+        private IEnumerator CrateSpawnCollisionFallRoutine(
+            TacticalUnit crate, Vector3 startWorld, Vector3 impactWorld,
+            int fallDistance, TacticalUnit lowerUnit)
+        {
+            if (crate == null)
+                yield break;
+
+            crate.BeginExternalForcedMovement();
+            try
+            {
+                if (crate == null || !crate.IsAlive)
+                    yield break;
+
+                var distance = Vector3.Distance(startWorld, impactWorld);
+                var duration = Mathf.Max(0.08f, distance / 5f);
+                var elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    if (crate == null || !crate.IsAlive)
+                        yield break;
+                    elapsed += Time.deltaTime;
+                    crate.transform.position = Vector3.Lerp(
+                        startWorld, impactWorld, Mathf.SmoothStep(0f, 1f, elapsed / duration));
+                    yield return null;
+                }
+
+                if (crate == null || !crate.IsAlive)
+                    yield break;
+
+                crate.transform.position = impactWorld;
+                var upperDamage = lowerUnit != null && lowerUnit.IsAlive
+                    ? lowerUnit.CurrentHealth
+                    : crate.MaxHealth;
+                var lowerDamage = crate.CurrentHealth;
+                var fallDamage = Mathf.Min(crate.MaxHealth, Mathf.Max(0, fallDistance - 1));
+
+                if (lowerUnit != null && lowerUnit.IsAlive)
+                    lowerUnit.TakeDamage(Mathf.Max(lowerDamage, fallDamage));
+                crate.TakeDamage(Mathf.Max(upperDamage, fallDamage));
+            }
+            finally
+            {
+                if (crate != null)
+                    crate.EndExternalForcedMovement();
             }
         }
 
@@ -214,7 +388,7 @@ namespace StellaStair.Grid
                 return 0;
             if (!woodHealth.TryGetValue(cell, out var health))
             {
-                health = woodMaxHealth;
+                health = WoodMaxHealth;
                 woodHealth[cell] = health;
             }
             return health;
@@ -240,7 +414,7 @@ namespace StellaStair.Grid
 
             woodHealth[cell] = remaining;
             woodTilemap.SetTileFlags(cell, TileFlags.None);
-            var ratio = remaining / (float)woodMaxHealth;
+            var ratio = remaining / (float)WoodMaxHealth;
             woodTilemap.SetColor(cell, new Color(1f, Mathf.Lerp(0.45f, 1f, ratio),
                 Mathf.Lerp(0.35f, 1f, ratio), 1f));
             return true;
@@ -323,7 +497,7 @@ namespace StellaStair.Grid
                 return;
             foreach (var cell in woodTilemap.cellBounds.allPositionsWithin)
                 if (woodTilemap.HasTile(cell))
-                    woodHealth[cell] = woodMaxHealth;
+                    woodHealth[cell] = WoodMaxHealth;
         }
 
         public bool IsPlayerDeploymentCell(GridPosition position) =>
@@ -414,6 +588,18 @@ namespace StellaStair.Grid
             }
 
             return false;
+        }
+
+        public void ResolveUnsupportedOccupants()
+        {
+            var units = new List<TacticalUnit>(occupants.Values);
+            foreach (var unit in units)
+            {
+                if (unit == null || !unit.IsAlive || !unit.IsPlaced)
+                    continue;
+                if (!IsWalkable(unit.Position))
+                    unit.TryFallAfterSupportDestroyed();
+            }
         }
 
         public bool CanEnter(GridPosition position, TacticalUnit mover = null)
@@ -788,6 +974,31 @@ namespace StellaStair.Grid
             occupants[destination] = unit;
             OccupancyChanged?.Invoke();
 
+            return true;
+        }
+
+        public bool TrySwapOccupants(TacticalUnit first, TacticalUnit second)
+        {
+            if (first == null || second == null || first == second)
+                return false;
+
+            GridPosition? firstPosition = null;
+            GridPosition? secondPosition = null;
+
+            foreach (var pair in occupants)
+            {
+                if (pair.Value == first)
+                    firstPosition = pair.Key;
+                else if (pair.Value == second)
+                    secondPosition = pair.Key;
+            }
+
+            if (!firstPosition.HasValue || !secondPosition.HasValue)
+                return false;
+
+            occupants[firstPosition.Value] = second;
+            occupants[secondPosition.Value] = first;
+            OccupancyChanged?.Invoke();
             return true;
         }
 

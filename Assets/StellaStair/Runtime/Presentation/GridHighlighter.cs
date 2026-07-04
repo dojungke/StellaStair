@@ -34,22 +34,43 @@ namespace StellaStair.Presentation
         {
             Show(board, positions, selected);
             foreach (var position in attackPositions)
-            {
-                if (board.IsWoodTile(position))
-                    CreateMarkerAtWorld(
-                        board.PositionToWorld(position), board, position, attackColor, 0.92f);
-                else
-                    CreateMarker(board, position, attackColor);
-            }
+                CreateMarker(board, position, attackColor);
         }
 
         public void ShowAttackPreview(TacticalBoard board, GridPosition selected,
             GridPosition impact, IEnumerable<GridPosition> knockbackDestinations,
             IEnumerable<GridPosition> collisionPositions, IEnumerable<GridPosition> voidPositions,
-            bool targetTerrain = false, int terrainPreviewDamage = 0)
+            bool targetTerrain = false, int terrainPreviewDamage = 0,
+            IEnumerable<GridPosition> reachablePositions = null,
+            IEnumerable<GridPosition> attackablePositions = null)
         {
             Clear();
             EnsureSprite();
+
+            if (reachablePositions != null)
+            {
+                var fadedReachableColor = reachableColor;
+                fadedReachableColor.a *= 0.65f;
+                foreach (var position in reachablePositions)
+                {
+                    if (position == selected)
+                        continue;
+                    CreateMarker(board, position, fadedReachableColor);
+                }
+            }
+
+            if (attackablePositions != null)
+            {
+                var fadedAttackColor = attackColor;
+                fadedAttackColor.a *= 0.55f;
+                foreach (var position in attackablePositions)
+                {
+                    if (position == impact)
+                        continue;
+                    CreateMarker(board, position, fadedAttackColor);
+                }
+            }
+
             if (targetTerrain)
             {
                 CreateMarkerAtWorld(board.PositionToWorld(impact), board, impact,
@@ -67,10 +88,19 @@ namespace StellaStair.Presentation
                 CreateCrossMarker(board, position, voidColor);
         }
 
-        public void ShowMovePreview(TacticalBoard board, GridPosition destination)
+        public void ShowMovePreview(TacticalBoard board, IEnumerable<GridPosition> reachablePositions,
+            GridPosition selected, GridPosition destination)
         {
             Clear();
             EnsureSprite();
+            var fadedReachableColor = reachableColor;
+            fadedReachableColor.a *= 0.75f;
+            foreach (var position in reachablePositions)
+            {
+                if (position == selected || position == destination)
+                    continue;
+                CreateMarker(board, position, fadedReachableColor);
+            }
             CreateMarker(board, destination, knockbackColor);
         }
 

@@ -120,6 +120,8 @@ MonoBehaviour:
   - position: {x: 1, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 4ca4fc51fcfac2141b9dea3a41e0fd27, type: 2}
     color: {r: 0.9, g: 0.12, b: 0.05, a: 1}
+  objectiveTargets: []
+  defenseObjectives: []
   enemyGuardSpawns:
   - position: {x: -1, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 3c0a0ea0b3c0e4643a3ce3aeacc21d6a, type: 2}
@@ -132,3 +134,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
     color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
   uiElements: []
+  rounds: []
+  stageType: 1
+  defenseTurnsToSurvive: 5

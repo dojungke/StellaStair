@@ -21,7 +21,12 @@ namespace StellaStair.Units
         [SerializeField, Min(1)] private int fallbackMovementPoints = 5;
         [SerializeField, Min(0.1f)] private float fallbackMoveSpeed = 5f;
         [SerializeField, Min(1)] private int fallbackMaxHealth = 10;
+        [SerializeField, Min(1)] private int currentLevel = 1;
+        [SerializeField, Min(0)] private int currentExperience;
+        [SerializeField, Min(1)] private int experienceToNextLevel = 3;
         [SerializeField, Min(1)] private int fallbackAttackDamage = 3;
+        [SerializeField] private AttackDistanceRule fallbackAttackDistanceRule = AttackDistanceRule.Any;
+        [SerializeField, Min(0)] private int fallbackMinimumAttackRange = 0;
         [SerializeField, Min(1)] private int fallbackAttackRange = 1;
         [SerializeField, Min(0)] private int fallbackVerticalAttackRange = 1;
         [SerializeField, Min(0)] private int fallbackKnockbackDistance = 0;
@@ -30,13 +35,24 @@ namespace StellaStair.Units
         [SerializeField, Min(0)] private int fallbackAreaKnockbackDistance = 0;
         [SerializeField, Min(0f)] private float ladderEntryPause = 0.18f;
         [SerializeField, Min(0.05f)] private float collisionImpactDuration = 0.16f;
+        [SerializeField, Min(0.1f)] private float fallbackUnitWidthInCells = 1f;
+        [SerializeField, Min(0.1f)] private float fallbackUnitHeightInCells = 1f;
+        [SerializeField] private Transform animationRoot;
+        [SerializeField] private bool hideSpriteRendererWhenAnimationPrefabExists = true;
+        [SerializeField] private bool autoAlignAnimationToCollider = true;
 
         private TacticalBoard board;
         private BoxCollider2D bodyCollider;
         private SpriteRenderer previewRenderer;
         private Coroutine attackPreviewBlinkRoutine;
+        private Coroutine selectionHighlightRoutine;
+        private Coroutine levelUpEffectRoutine;
         private Color previewOriginalColor;
+        private Color selectionOriginalColor;
         private UnitHealthBar healthBar;
+        private TacticalUnitAnimator unitAnimator;
+        private GameObject animationPrefabInstance;
+        private GameObject animationPrefabSource;
         private bool isImpactReserved;
         private TacticalUnit reservedImpactTarget;
         public UnitDefinition Definition => definition;
@@ -56,12 +72,22 @@ namespace StellaStair.Units
             !HasAttacked && HasMoved && board != null && board.CanEnter(TurnStartPosition, this);
         public bool HasAttacked { get; private set; }
         public int CurrentHealth { get; private set; }
+        public int CurrentLevel => currentLevel;
+        public int CurrentExperience => currentExperience;
+        public int ExperienceToNextLevel => experienceToNextLevel;
+        public TacticalUnit LastDamageSource { get; private set; }
         public int RemainingMovement { get; private set; }
         public int MovementPoints => definition != null ? definition.MovementPoints : fallbackMovementPoints;
         public int MaxHealth => isCrate
             ? crateMaxHealth
             : definition != null ? definition.MaxHealth : fallbackMaxHealth;
         public int AttackDamage => definition != null ? definition.AttackDamage : fallbackAttackDamage;
+        public AttackDistanceRule AttackDistanceRule => definition != null
+            ? definition.AttackDistanceRule
+            : fallbackAttackDistanceRule;
+        public int MinimumAttackRange => definition != null
+            ? definition.MinimumAttackRange
+            : fallbackMinimumAttackRange;
         public int AttackRange => definition != null ? definition.AttackRange : fallbackAttackRange;
         public int VerticalAttackRange => definition != null
             ? definition.VerticalAttackRange
@@ -78,10 +104,21 @@ namespace StellaStair.Units
         public int AreaKnockbackDistance => definition != null
             ? definition.AreaKnockbackDistance
             : fallbackAreaKnockbackDistance;
+        public float UnitWidthInCells => definition != null
+            ? definition.UnitWidthInCells
+            : fallbackUnitWidthInCells;
+        public float UnitHeightInCells => definition != null
+            ? definition.UnitHeightInCells
+            : fallbackUnitHeightInCells;
+        public int DefaultFacingDirection => definition != null && definition.DefaultFacingDirection < 0
+            ? -1
+            : 1;
         public int FacingDirection { get; private set; } = 1;
         public event Action<TacticalUnit> MoveStarted;
         public event Action<TacticalUnit> MoveCompleted;
         public event Action<TacticalUnit, int, int> HealthChanged;
+        public event Action<TacticalUnit, int, int> ExperienceChanged;
+        public event Action<TacticalUnit, int> LeveledUp;
         public event Action<TacticalUnit> Died;
 
         private void Awake()
@@ -90,13 +127,13 @@ namespace StellaStair.Units
             // 직렬화할 수 있다. 선택 입력이 사라지지 않도록 최소 클릭 영역을 보장한다.
             bodyCollider = GetComponent<BoxCollider2D>();
             previewRenderer = GetComponent<SpriteRenderer>();
-            if (bodyCollider.size.x < 0.1f || bodyCollider.size.y < 0.1f)
-                bodyCollider.size = Vector2.one;
+            ApplyUnitBodySize();
             CurrentHealth = MaxHealth;
             RemainingMovement = MovementPoints;
             healthBar = GetComponent<UnitHealthBar>();
             if (healthBar == null)
                 healthBar = gameObject.AddComponent<UnitHealthBar>();
+            RefreshAnimationRig();
         }
 
         public void Configure(UnitDefinition unitDefinition, UnitTeam unitTeam)
@@ -111,6 +148,202 @@ namespace StellaStair.Units
                 CurrentHealth = MaxHealth;
                 RemainingMovement = MovementPoints;
             }
+            ApplyUnitBodySize();
+            RefreshAnimationRig();
+        }
+
+        private void RefreshAnimationRig()
+        {
+            var prefab = definition != null ? definition.AnimationPrefab : null;
+            if (prefab == null)
+            {
+                if (animationPrefabInstance != null)
+                    Destroy(animationPrefabInstance);
+                animationPrefabInstance = null;
+                animationPrefabSource = null;
+                unitAnimator = GetComponentInChildren<TacticalUnitAnimator>();
+                if (previewRenderer != null)
+                    previewRenderer.enabled = true;
+                unitAnimator?.ApplyController(definition != null ? definition.AnimationController : null);
+                unitAnimator?.Bind(this);
+                SetFacingDirection(FacingDirection);
+                return;
+            }
+
+            if (animationPrefabSource != prefab)
+            {
+                if (animationPrefabInstance != null)
+                    Destroy(animationPrefabInstance);
+
+                var parent = animationRoot != null ? animationRoot : transform;
+                animationPrefabInstance = Instantiate(prefab, parent);
+                animationPrefabInstance.name = prefab.name;
+                animationPrefabInstance.transform.localRotation = Quaternion.identity;
+                animationPrefabSource = prefab;
+            }
+
+            ApplyAnimationLocalScale();
+            ApplyAnimationLocalPosition();
+
+            unitAnimator = animationPrefabInstance != null
+                ? animationPrefabInstance.GetComponentInChildren<TacticalUnitAnimator>()
+                : GetComponentInChildren<TacticalUnitAnimator>();
+
+            if (unitAnimator == null && animationPrefabInstance != null)
+                unitAnimator = animationPrefabInstance.AddComponent<TacticalUnitAnimator>();
+
+            if (previewRenderer != null)
+                previewRenderer.enabled = !hideSpriteRendererWhenAnimationPrefabExists;
+
+            unitAnimator?.ApplyController(definition != null ? definition.AnimationController : null);
+            unitAnimator?.Bind(this);
+            SetFacingDirection(FacingDirection);
+        }
+
+        private void ApplyAnimationLocalScale()
+        {
+            if (animationPrefabInstance == null || definition == null)
+                return;
+
+            animationPrefabInstance.transform.localScale = Vector3.one;
+            if (!TryGetAnimationRendererBounds(out var bounds) ||
+                bounds.size.x <= 0.0001f || bounds.size.y <= 0.0001f)
+            {
+                animationPrefabInstance.transform.localScale = GetParentCompensatedScale(1f);
+                return;
+            }
+
+            var targetSize = GetUnitWorldSize();
+            var fitScale = Mathf.Min(
+                targetSize.x / bounds.size.x,
+                targetSize.y / bounds.size.y);
+            fitScale *= GetAnimationScaleMultiplier();
+            animationPrefabInstance.transform.localScale = GetParentCompensatedScale(fitScale);
+        }
+
+        private float GetAnimationScaleMultiplier()
+        {
+            if (definition == null)
+                return 1f;
+            var scale = definition.AnimationLocalScale;
+            if (!Mathf.Approximately(scale.x, 0f))
+                return Mathf.Abs(scale.x);
+            if (!Mathf.Approximately(scale.y, 0f))
+                return Mathf.Abs(scale.y);
+            return 1f;
+        }
+
+        private Vector3 GetParentCompensatedScale(float uniformScale)
+        {
+            var parent = animationPrefabInstance != null
+                ? animationPrefabInstance.transform.parent
+                : null;
+            var parentScale = parent != null ? parent.lossyScale : Vector3.one;
+            return new Vector3(
+                SafeDivide(uniformScale, Mathf.Abs(parentScale.x)),
+                SafeDivide(uniformScale, Mathf.Abs(parentScale.y)),
+                SafeDivide(1f, Mathf.Abs(parentScale.z)));
+        }
+
+        private static float SafeDivide(float value, float divisor)
+        {
+            return Mathf.Approximately(divisor, 0f) ? value : value / divisor;
+        }
+
+        private bool TryGetAnimationRendererBounds(out Bounds bounds)
+        {
+            bounds = default;
+            if (animationPrefabInstance == null)
+                return false;
+            var renderers = animationPrefabInstance.GetComponentsInChildren<Renderer>();
+            if (renderers == null || renderers.Length == 0)
+                return false;
+            bounds = renderers[0].bounds;
+            for (var i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+            return true;
+        }
+
+        private void ApplyUnitBodySize()
+        {
+            if (bodyCollider == null)
+                return;
+            var size = GetUnitWorldSize();
+            bodyCollider.size = size;
+            bodyCollider.offset = new Vector2(0f, size.y * 0.5f - 0.5f);
+
+            if (previewRenderer != null && (definition == null || definition.AnimationPrefab == null))
+            {
+                previewRenderer.drawMode = SpriteDrawMode.Sliced;
+                previewRenderer.size = size;
+            }
+        }
+
+        private Vector2 GetUnitWorldSize()
+        {
+            var cellSize = board != null && board.Grid != null
+                ? board.Grid.cellSize
+                : Vector3.one;
+            return new Vector2(
+                Mathf.Max(0.1f, UnitWidthInCells) * Mathf.Abs(cellSize.x),
+                Mathf.Max(0.1f, UnitHeightInCells) * Mathf.Abs(cellSize.y));
+        }
+
+        private void ApplyAnimationLocalPosition()
+        {
+            if (animationPrefabInstance == null || definition == null)
+                return;
+
+            animationPrefabInstance.transform.localPosition = Vector3.zero;
+            var localPosition = definition.AnimationLocalOffset;
+            if (autoAlignAnimationToCollider && bodyCollider != null)
+                localPosition += GetAnimationAutoAlignOffset();
+            animationPrefabInstance.transform.localPosition = localPosition;
+        }
+
+        private Vector3 GetAnimationAutoAlignOffset()
+        {
+            var renderers = animationPrefabInstance.GetComponentsInChildren<Renderer>();
+            if (renderers == null || renderers.Length == 0)
+                return Vector3.zero;
+
+            var bounds = renderers[0].bounds;
+            for (var i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+
+            var parent = animationPrefabInstance.transform.parent != null
+                ? animationPrefabInstance.transform.parent
+                : transform;
+            var visualCenterLocal = parent.InverseTransformPoint(bounds.center);
+            var visualBottomLocal = parent.InverseTransformPoint(
+                new Vector3(bounds.center.x, bounds.min.y, bounds.center.z));
+            var colliderBottom = bodyCollider.offset.y - bodyCollider.size.y * 0.5f;
+            return new Vector3(
+                bodyCollider.offset.x - visualCenterLocal.x,
+                colliderBottom - visualBottomLocal.y,
+                0f);
+        }
+
+        private void SetFacingDirection(int direction)
+        {
+            var normalized = direction < 0 ? -1 : 1;
+            FacingDirection = normalized;
+            var visualDirection = normalized * DefaultFacingDirection;
+            unitAnimator?.SetFacing(visualDirection);
+            if (previewRenderer != null)
+                previewRenderer.flipX = visualDirection < 0;
+        }
+
+        public void FaceToward(GridPosition targetPosition)
+        {
+            if (targetPosition.X == Position.X)
+                return;
+            SetFacingDirection(targetPosition.X > Position.X ? 1 : -1);
+        }
+
+        public void RestoreFacingDirection(int direction)
+        {
+            SetFacingDirection(direction);
         }
 
         public bool TryPlace(TacticalBoard targetBoard, GridPosition position, bool requirePlayerZone)
@@ -123,8 +356,64 @@ namespace StellaStair.Units
             board = targetBoard;
             Position = position;
             IsPlaced = true;
+            ApplyUnitBodySize();
             transform.position = GetStandingWorldPosition(position);
             return true;
+        }
+
+        public bool TrySwapPlacementWith(TacticalUnit other, bool requirePlayerZone)
+        {
+            if (other == null || other == this ||
+                !IsAlive || !other.IsAlive ||
+                !IsPlaced || !other.IsPlaced ||
+                IsMoving || other.IsMoving ||
+                IsAttacking || other.IsAttacking ||
+                board == null || board != other.board)
+                return false;
+
+            if (requirePlayerZone &&
+                (!board.IsPlayerDeploymentCell(Position) ||
+                 !board.IsPlayerDeploymentCell(other.Position)))
+                return false;
+
+            var ownPosition = Position;
+            var otherPosition = other.Position;
+            if (!board.TrySwapOccupants(this, other))
+                return false;
+
+            Position = otherPosition;
+            other.Position = ownPosition;
+            transform.position = GetStandingWorldPosition(Position);
+            other.transform.position = other.GetStandingWorldPosition(other.Position);
+            return true;
+        }
+
+        public void PrepareUnoccupiedSpawnFall(
+            TacticalBoard targetBoard, GridPosition impactPosition, Vector3 startWorldPosition)
+        {
+            board = targetBoard;
+            Position = impactPosition;
+            IsPlaced = true;
+            ApplyUnitBodySize();
+            transform.position = startWorldPosition;
+        }
+
+        public void BeginExternalForcedMovement()
+        {
+            if (IsMoving)
+                return;
+            IsMoving = true;
+            unitAnimator?.PlayMove();
+            MoveStarted?.Invoke(this);
+        }
+
+        public void EndExternalForcedMovement()
+        {
+            if (!IsMoving)
+                return;
+            IsMoving = false;
+            unitAnimator?.PlayIdle();
+            MoveCompleted?.Invoke(this);
         }
 
         public bool TryMoveTo(GridPosition destination)
@@ -142,7 +431,7 @@ namespace StellaStair.Units
 
             RemainingMovement = Mathf.Max(0, RemainingMovement - path.Count);
             if (destination.X != Position.X)
-                FacingDirection = destination.X > Position.X ? 1 : -1;
+                SetFacingDirection(destination.X > Position.X ? 1 : -1);
             StartCoroutine(MoveRoutine(path, destination, CalculateMovementFallDamage(path)));
             return true;
         }
@@ -151,6 +440,7 @@ namespace StellaStair.Units
             IReadOnlyList<GridPosition> path, GridPosition destination, int fallDamage = 0)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
             var previous = Position;
@@ -167,6 +457,7 @@ namespace StellaStair.Units
 
             Position = destination;
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
             if (fallDamage > 0)
                 TakeDamage(fallDamage);
@@ -192,6 +483,10 @@ namespace StellaStair.Units
 
         private IEnumerator MoveLadderSegment(Vector3 start, Vector3 target, float speed)
         {
+            var horizontalDelta = target.x - start.x;
+            if (Mathf.Abs(horizontalDelta) > 0.01f)
+                SetFacingDirection(horizontalDelta > 0f ? 1 : -1);
+
             var distance = Vector3.Distance(start, target);
             if (distance < 0.001f)
                 yield break;
@@ -242,7 +537,7 @@ namespace StellaStair.Units
 
             RemainingMovement = MovementPoints;
             if (TurnStartPosition.X != Position.X)
-                FacingDirection = TurnStartPosition.X > Position.X ? 1 : -1;
+                SetFacingDirection(TurnStartPosition.X > Position.X ? 1 : -1);
             StartCoroutine(MoveRoutine(path, TurnStartPosition));
             return true;
         }
@@ -271,8 +566,15 @@ namespace StellaStair.Units
 
         public bool IsPositionInAttackRange(GridPosition origin, GridPosition target)
         {
-            return Mathf.Abs(origin.X - target.X) <= AttackRange &&
-                   Mathf.Abs(origin.Y - target.Y) <= VerticalAttackRange;
+            var horizontalDistance = Mathf.Abs(origin.X - target.X);
+            var verticalDistance = Mathf.Abs(origin.Y - target.Y);
+            var distance = Mathf.Max(horizontalDistance, verticalDistance);
+            var minimumDistance = AttackDistanceRule == AttackDistanceRule.DistantOnly
+                ? MinimumAttackRange
+                : 0;
+            return distance >= minimumDistance &&
+                   horizontalDistance <= AttackRange &&
+                   verticalDistance <= VerticalAttackRange;
         }
 
         public bool TryAttack(TacticalUnit target, bool allowFriendlyFire = false)
@@ -293,7 +595,7 @@ namespace StellaStair.Units
 
             HasAttacked = true;
             if (targetPosition.X != Position.X)
-                FacingDirection = targetPosition.X > Position.X ? 1 : -1;
+                SetFacingDirection(targetPosition.X > Position.X ? 1 : -1);
             StartCoroutine(AttackRoutine(targetPosition, allowFriendlyFire, false));
             return true;
         }
@@ -309,22 +611,28 @@ namespace StellaStair.Units
 
             HasAttacked = true;
             if (targetPosition.X != Position.X)
-                FacingDirection = targetPosition.X > Position.X ? 1 : -1;
+                SetFacingDirection(targetPosition.X > Position.X ? 1 : -1);
             StartCoroutine(AttackRoutine(targetPosition, true, true));
             return true;
         }
 
-        public void TakeDamage(int amount)
+        public void TakeDamage(int amount, TacticalUnit source = null)
         {
             if (!IsAlive || amount <= 0)
                 return;
 
+            if (source != null && source != this)
+                LastDamageSource = source;
+            unitAnimator?.PlayHit();
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             HealthChanged?.Invoke(this, CurrentHealth, MaxHealth);
             if (CurrentHealth > 0)
                 return;
 
+            SetSelectedHighlighted(false);
+            SetAttackPreviewed(false);
             var deathPosition = Position;
+            unitAnimator?.PlayDeath();
             if (board != null)
                 board.RemoveOccupancy(this);
             if (isExplosiveCrate && board != null)
@@ -333,6 +641,55 @@ namespace StellaStair.Units
             gameObject.SetActive(false);
         }
 
+        public void GainExperience(int amount)
+        {
+            if (amount <= 0 || isCrate || isObjective)
+                return;
+
+            currentExperience += amount;
+            while (currentExperience >= experienceToNextLevel)
+            {
+                currentExperience -= experienceToNextLevel;
+                currentLevel++;
+                LeveledUp?.Invoke(this, currentLevel);
+                unitAnimator?.PlayLevelUp();
+                PlayLevelUpEffect();
+            }
+            ExperienceChanged?.Invoke(this, currentExperience, experienceToNextLevel);
+        }
+
+        private void PlayLevelUpEffect()
+        {
+            if (levelUpEffectRoutine != null)
+                StopCoroutine(levelUpEffectRoutine);
+            levelUpEffectRoutine = StartCoroutine(LevelUpEffectRoutine());
+        }
+
+        private IEnumerator LevelUpEffectRoutine()
+        {
+            if (previewRenderer == null)
+                yield break;
+
+            var originalScale = transform.localScale;
+            var originalColor = previewRenderer.color;
+            const float duration = 0.42f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var pulse = Mathf.Sin(t * Mathf.PI);
+                transform.localScale = Vector3.Scale(
+                    originalScale, new Vector3(1f + pulse * 0.18f, 1f + pulse * 0.18f, 1f));
+                previewRenderer.color = Color.Lerp(
+                    originalColor, new Color(1f, 0.95f, 0.25f, originalColor.a), pulse * 0.75f);
+                yield return null;
+            }
+
+            transform.localScale = originalScale;
+            previewRenderer.color = originalColor;
+            levelUpEffectRoutine = null;
+        }
         public void SetAttackPreviewed(bool previewed)
         {
             if (attackPreviewBlinkRoutine != null)
@@ -354,6 +711,27 @@ namespace StellaStair.Units
             attackPreviewBlinkRoutine = StartCoroutine(AttackPreviewBlinkRoutine());
         }
 
+        public void SetSelectedHighlighted(bool highlighted)
+        {
+            if (selectionHighlightRoutine != null)
+            {
+                StopCoroutine(selectionHighlightRoutine);
+                selectionHighlightRoutine = null;
+            }
+
+            if (previewRenderer == null)
+                return;
+
+            if (!highlighted)
+            {
+                previewRenderer.color = selectionOriginalColor;
+                return;
+            }
+
+            selectionOriginalColor = previewRenderer.color;
+            selectionHighlightRoutine = StartCoroutine(SelectionHighlightRoutine());
+        }
+
         public void SetPreviewDamage(int damage) => healthBar?.SetPreviewDamage(damage);
 
         public void SetHealthBarVisible(bool visible) =>
@@ -371,6 +749,19 @@ namespace StellaStair.Units
             }
         }
 
+        private IEnumerator SelectionHighlightRoutine()
+        {
+            while (true)
+            {
+                var pulse = (Mathf.Sin(Time.unscaledTime * 7f) + 1f) * 0.5f;
+                previewRenderer.color = Color.Lerp(
+                    selectionOriginalColor,
+                    new Color(1f, 0.95f, 0.35f, selectionOriginalColor.a),
+                    0.25f + pulse * 0.35f);
+                yield return null;
+            }
+        }
+
         private IEnumerator AttackRoutine(
             GridPosition targetPosition, bool allowFriendlyFire, bool attackWoodOnly)
         {
@@ -381,6 +772,8 @@ namespace StellaStair.Units
                 ? FacingDirection
                 : targetPosition.X > Position.X ? 1 : -1;
             var lunge = origin + Vector3.right * (0.18f * direction);
+            SetFacingDirection(direction);
+            unitAnimator?.PlayAttack();
 
             yield return MoveTransform(origin, lunge, 0.1f);
             var areaTargets = new List<TacticalUnit>();
@@ -391,7 +784,7 @@ namespace StellaStair.Units
                     for (var xOffset = -1; xOffset <= 1; xOffset += 2)
                     {
                         var sidePosition = new GridPosition(
-                            targetPosition.X + xOffset, targetPosition.Y - 1);
+                            targetPosition.X + xOffset, targetPosition.Y);
                         if (board.TryGetOccupant(sidePosition, out var sideUnit) &&
                             sideUnit != null && sideUnit != this)
                             areaTargets.Add(sideUnit);
@@ -417,7 +810,7 @@ namespace StellaStair.Units
                 var deferLethalDamage = KnockbackDistance > 0 &&
                                         AttackDamage >= target.CurrentHealth;
                 if (!deferLethalDamage)
-                    target.TakeDamage(AttackDamage);
+                    target.TakeDamage(AttackDamage, this);
 
                 if (target.IsAlive && KnockbackDistance > 0 &&
                     target.TryKnockbackFrom(this, KnockbackDistance))
@@ -427,9 +820,9 @@ namespace StellaStair.Units
                 }
 
                 if (deferLethalDamage && target != null && target.IsAlive)
-                    target.TakeDamage(AttackDamage);
+                    target.TakeDamage(AttackDamage, this);
             }
-            else
+            else if (attackWoodOnly)
             {
                 board.DamageWood(targetPosition, AttackDamage);
             }
@@ -458,11 +851,13 @@ namespace StellaStair.Units
                 : GetStandingWorldPosition(Position);
             yield return MoveTransform(transform.position, returnPosition, 0.1f);
             IsAttacking = false;
+            if (!IsMoving)
+                unitAnimator?.PlayIdle();
         }
 
         public bool TryKnockbackFrom(TacticalUnit source, int distance)
         {
-            if (!IsAlive || !IsPlaced || IsMoving || IsAttacking || source == null || distance <= 0)
+            if (isObjective || !IsAlive || !IsPlaced || IsMoving || IsAttacking || source == null || distance <= 0)
                 return false;
 
             var direction = Position.X == source.Position.X
@@ -520,7 +915,7 @@ namespace StellaStair.Units
             int direction, int distance, bool allowWhileAttacking = false,
             bool suppressFallDamage = false)
         {
-            if (!IsAlive || !IsPlaced || IsMoving || isImpactReserved ||
+            if (isObjective || !IsAlive || !IsPlaced || IsMoving || isImpactReserved ||
                 (IsAttacking && !allowWhileAttacking) || distance <= 0)
                 return false;
             direction = direction < 0 ? -1 : 1;
@@ -554,7 +949,7 @@ namespace StellaStair.Units
                                     fallDamage + Mathf.Max(0, fallDistance - 1));
                             blocker.isImpactReserved = true;
                             reservedImpactTarget = blocker;
-                            FacingDirection = direction;
+                            SetFacingDirection(direction);
                             StartCoroutine(FallPushCollisionRoutine(
                                 path, next, blocker, direction, impactFallDamage));
                             return true;
@@ -562,7 +957,7 @@ namespace StellaStair.Units
 
                         var upperDamage = blocker.CurrentHealth;
                         var lowerDamage = CurrentHealth;
-                        FacingDirection = direction;
+                        SetFacingDirection(direction);
                         StartCoroutine(FallCollisionRoutine(
                             path, next, blocker, upperDamage, lowerDamage));
                         return true;
@@ -582,7 +977,7 @@ namespace StellaStair.Units
                         return false;
                     }
 
-                    FacingDirection = direction;
+                    SetFacingDirection(direction);
                     var horizontalImpactPosition = blocker != null
                         ? blocker.Position
                         : new GridPosition(current.X + direction, current.Y);
@@ -595,7 +990,7 @@ namespace StellaStair.Units
                 {
                     if (board != null)
                         board.RemoveOccupancy(this);
-                    FacingDirection = direction;
+                    SetFacingDirection(direction);
                     StartCoroutine(FallIntoVoidRoutine(path, direction));
                     return true;
                 }
@@ -608,7 +1003,7 @@ namespace StellaStair.Units
             if (path.Count == 0 || !board.TryOccupy(this, current))
                 return false;
 
-            FacingDirection = direction;
+            SetFacingDirection(direction);
             var resolvedFallDamage = suppressFallDamage
                 ? 0
                 : Mathf.Min(MaxHealth, fallDamage);
@@ -624,6 +1019,7 @@ namespace StellaStair.Units
             int fallDamage)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
@@ -642,15 +1038,15 @@ namespace StellaStair.Units
                 var upperDamage = lowerUnit != null ? lowerUnit.CurrentHealth : 0;
                 var lowerDamage = CurrentHealth;
                 if (lowerUnit != null && lowerUnit.IsAlive)
-                    lowerUnit.TakeDamage(lowerDamage);
-                TakeDamage(upperDamage);
+                    lowerUnit.TakeDamage(lowerDamage, this);
+                TakeDamage(upperDamage, lowerUnit);
             }
             else
             {
                 if (board.TryOccupy(this, collisionPosition))
                     Position = collisionPosition;
                 if (fallDamage > 0 && lowerUnit.IsAlive)
-                    lowerUnit.TakeDamage(fallDamage);
+                    lowerUnit.TakeDamage(fallDamage, this);
                 TakeDamage(fallDamage);
             }
 
@@ -661,6 +1057,7 @@ namespace StellaStair.Units
                 yield return MoveStepRoutine(GetStandingWorldPosition(Position), speed);
 
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
         }
 
@@ -679,6 +1076,7 @@ namespace StellaStair.Units
             int lowerDamage)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
@@ -690,8 +1088,8 @@ namespace StellaStair.Units
             yield return PlayCollisionImpactRoutine(lowerUnit);
 
             if (lowerUnit != null && lowerUnit.IsAlive)
-                lowerUnit.TakeDamage(lowerDamage);
-            TakeDamage(upperDamage);
+                lowerUnit.TakeDamage(lowerDamage, this);
+            TakeDamage(upperDamage, lowerUnit);
 
             if (!IsAlive)
                 yield break;
@@ -707,6 +1105,7 @@ namespace StellaStair.Units
             }
 
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
         }
 
@@ -753,6 +1152,7 @@ namespace StellaStair.Units
             TacticalUnit blockingUnit)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
@@ -767,8 +1167,8 @@ namespace StellaStair.Units
 
             ReleaseImpactReservation();
             if (blockingUnit != null && blockingUnit.IsAlive)
-                blockingUnit.TakeDamage(1);
-            TakeDamage(1);
+                blockingUnit.TakeDamage(1, this);
+            TakeDamage(1, blockingUnit);
 
             if (!IsAlive)
                 yield break;
@@ -776,6 +1176,7 @@ namespace StellaStair.Units
             yield return MoveTransform(transform.position, standingWorld, 0.1f);
             Position = returnPosition;
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
         }
 
@@ -864,6 +1265,7 @@ namespace StellaStair.Units
             int fallDamage)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
@@ -872,6 +1274,7 @@ namespace StellaStair.Units
 
             Position = destination;
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
             if (fallDamage > 0)
                 TakeDamage(fallDamage);
@@ -881,11 +1284,13 @@ namespace StellaStair.Units
             GridPosition destination, int fallDamage)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
             yield return MoveStepRoutine(GetStandingWorldPosition(destination), speed);
             Position = destination;
             IsMoving = false;
+            unitAnimator?.PlayIdle();
             MoveCompleted?.Invoke(this);
             if (fallDamage > 0)
                 TakeDamage(fallDamage);
@@ -894,6 +1299,7 @@ namespace StellaStair.Units
         private IEnumerator SupportDestroyedVoidFallRoutine()
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var start = transform.position;
             var target = start + Vector3.down * (board.Grid.cellSize.y * 4f);
@@ -905,6 +1311,7 @@ namespace StellaStair.Units
         private IEnumerator FallIntoVoidRoutine(IReadOnlyList<GridPosition> path, int direction)
         {
             IsMoving = true;
+            unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
             foreach (var step in path)
@@ -939,6 +1346,9 @@ namespace StellaStair.Units
             var duration = Mathf.Max(0.05f, distance / speed);
             var elapsed = 0f;
             var heightDelta = target.y - start.y;
+            var horizontalDelta = target.x - start.x;
+            if (Mathf.Abs(horizontalDelta) > 0.01f)
+                SetFacingDirection(horizontalDelta > 0f ? 1 : -1);
 
             while (elapsed < duration)
             {

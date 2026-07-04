@@ -36,10 +36,13 @@ namespace StellaStair.Input
         private readonly Dictionary<TacticalUnit, int> previewDamageByUnit = new();
         private GridPosition? pendingMoveDestination;
         private int pendingMoveFallDamage;
+        private TacticalUnit facingPreviewUnit;
+        private int facingPreviewOriginalDirection;
         private DeploymentManager subscribedDeployment;
 
         public bool IsAttackMode { get; private set; }
         public bool CanUseAttackButton => deployment != null &&
+            !deployment.InteractionLocked &&
             deployment.Phase == BattlePhase.PlayerTurn && selected != null &&
             selected.Team == UnitTeam.Player && selected.IsAlive &&
             !selected.IsMoving && !selected.HasAttacked;
@@ -161,6 +164,7 @@ namespace StellaStair.Input
                     : selected.TryAttackPosition(target, true);
                 if (attacked)
                 {
+                    CommitFacingPreview();
                     ClearSelection();
                     return;
                 }
@@ -176,6 +180,8 @@ namespace StellaStair.Input
 
         public void HandlePrimaryButton()
         {
+            if (deployment != null && deployment.InteractionLocked)
+                return;
             if (pendingMoveDestination.HasValue)
             {
                 ConfirmPendingMove();
@@ -195,6 +201,8 @@ namespace StellaStair.Input
 
         public void HandleSecondaryButton()
         {
+            if (deployment != null && deployment.InteractionLocked)
+                return;
             if (pendingMoveDestination.HasValue)
             {
                 CancelPendingMove();
@@ -211,6 +219,8 @@ namespace StellaStair.Input
         public void HandleTurnButton()
         {
             if (deployment == null)
+                return;
+            if (deployment.InteractionLocked)
                 return;
             if (deployment.Phase == BattlePhase.Deployment && deployment.StartBattle())
             {
@@ -232,6 +242,8 @@ namespace StellaStair.Input
         private void Update()
         {
             RefreshActionButtons();
+            if (deployment == null || deployment.InteractionLocked)
+                return;
             if (Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame &&
                 deployment.Phase == BattlePhase.Deployment && deployment.StartBattle())
             {
@@ -262,11 +274,6 @@ namespace StellaStair.Input
             var world = worldCamera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, -worldCamera.transform.position.z));
             var cell = deployment.Board.StandingWorldToPosition(world);
             var terrainCell = deployment.Board.WorldToPosition(world);
-            if (IsAttackMode)
-            {
-                if (deployment.Board.IsWoodTile(terrainCell))
-                    cell = terrainCell;
-            }
 
             if (rightClick)
             {
@@ -301,6 +308,18 @@ namespace StellaStair.Input
             }
 
             var hit = Physics2D.OverlapPoint(world, unitLayerMask);
+            if (IsAttackMode && hit != null && hit.TryGetComponent<TacticalUnit>(out var attackTargetUnit) &&
+                selected != null && attackablePositions.Contains(attackTargetUnit.Position) &&
+                attackTargetUnit != selected)
+            {
+                SelectAttackPreview(attackTargetUnit.Position);
+                return;
+            }
+            if (IsAttackMode && selected != null && attackablePositions.Contains(cell))
+            {
+                SelectAttackPreview(cell);
+                return;
+            }
             if (IsAttackMode && deployment.Board.IsWoodTile(terrainCell) &&
                 attackablePositions.Contains(terrainCell))
             {
@@ -315,12 +334,16 @@ namespace StellaStair.Input
             }
             if (hit != null && hit.TryGetComponent<TacticalUnit>(out var unit))
             {
-                if (IsAttackMode && selected != null && attackablePositions.Contains(unit.Position) &&
-                    unit != selected)
+                if (deployment.Phase == BattlePhase.Deployment &&
+                    selected != null && selected != unit &&
+                    selected.Team == UnitTeam.Player && unit.Team == UnitTeam.Player &&
+                    selected.IsPlaced && unit.IsPlaced &&
+                    deployment.TrySwapDeployment(selected, unit))
                 {
-                    SelectAttackPreview(unit.Position);
+                    ClearSelection();
+                    return;
                 }
-                else if (!IsAttackMode)
+                if (!IsAttackMode)
                 {
                     Select(unit);
                 }
@@ -335,15 +358,11 @@ namespace StellaStair.Input
             if (deployment.Phase == BattlePhase.Deployment)
             {
                 if (deployment.TryDeploy(selected, cell))
-                    Select(selected);
+                    ClearSelection();
             }
             else if (deployment.Phase == BattlePhase.PlayerTurn)
             {
-                if (IsAttackMode && attackablePositions.Contains(cell))
-                {
-                    SelectAttackPreview(cell);
-                }
-                else if (!IsAttackMode && reachable != null && reachable.ContainsKey(cell) &&
+                if (!IsAttackMode && reachable != null && reachable.ContainsKey(cell) &&
                          cell != selected.Position)
                 {
                     SelectMovePreview(cell);
@@ -353,6 +372,8 @@ namespace StellaStair.Input
 
         private void Select(TacticalUnit unit)
         {
+            if (deployment.InteractionLocked)
+                return;
             if (deployment.Phase != BattlePhase.Deployment && deployment.Phase != BattlePhase.PlayerTurn)
             {
                 ClearSelection();
@@ -363,6 +384,7 @@ namespace StellaStair.Input
                 ClearMovePreview();
                 if (selected != null)
                 {
+                    selected.SetSelectedHighlighted(false);
                     if (selected.IsCrate)
                         selected.SetHealthBarVisible(false);
                     selected.MoveCompleted -= OnSelectedMoveCompleted;
@@ -374,6 +396,7 @@ namespace StellaStair.Input
                 unit.Died += OnSelectedDied;
             }
             selected = unit;
+            selected.SetSelectedHighlighted(true);
             if (deployment.Phase == BattlePhase.Deployment)
             {
                 if (unit.Team != UnitTeam.Player)
@@ -384,7 +407,10 @@ namespace StellaStair.Input
                 var positions = new List<GridPosition>();
                 foreach (var position in deployment.Board.GetPlayerDeploymentCells())
                 {
-                    if (deployment.Board.CanEnter(position, unit))
+                    if (deployment.Board.CanEnter(position, unit) ||
+                        deployment.Board.TryGetOccupant(position, out var occupant) &&
+                        occupant != null && occupant != unit &&
+                        occupant.Team == UnitTeam.Player)
                         positions.Add(position);
                 }
                 highlighter.Show(deployment.Board, positions, unit.IsPlaced ? unit.Position : null);
@@ -420,7 +446,7 @@ namespace StellaStair.Input
 
             if (pendingMoveDestination.HasValue)
             {
-                highlighter.ShowMovePreview(deployment.Board, pendingMoveDestination.Value);
+                highlighter.ShowMovePreview(deployment.Board, reachable.Keys, selected.Position, pendingMoveDestination.Value);
                 return;
             }
 
@@ -463,8 +489,13 @@ namespace StellaStair.Input
                 }
                 else
                 {
-                    highlighter.Show(
-                        deployment.Board, new[] { selected.Position }, selected.Position);
+                    highlighter.ShowEnemyIntentPreview(
+                        deployment.Board, selected.Position,
+                        selected.Position, false,
+                        selected.Position, false,
+                        reachable.Keys, attackablePositions,
+                        previewKnockbackDestinations,
+                        previewCollisionPositions, previewVoidPositions);
                 }
                 return;
             }
@@ -495,7 +526,8 @@ namespace StellaStair.Input
                         previewKnockbackDestinations,
                         previewCollisionPositions, previewVoidPositions,
                         pendingAttackTargetsWood,
-                        pendingAttackTargetsWood ? selected.AttackDamage : 0);
+                        pendingAttackTargetsWood ? selected.AttackDamage : 0,
+                        reachable.Keys, attackablePositions);
                 }
                 else
                 {
@@ -525,6 +557,7 @@ namespace StellaStair.Input
         {
             if (selected != null)
             {
+                selected.SetSelectedHighlighted(false);
                 if (selected.IsCrate)
                     selected.SetHealthBarVisible(false);
                 selected.MoveCompleted -= OnSelectedMoveCompleted;
@@ -540,6 +573,33 @@ namespace StellaStair.Input
             RefreshActionButtons();
         }
 
+        private void ApplyFacingPreview(GridPosition targetPosition)
+        {
+            if (selected == null || targetPosition.X == selected.Position.X)
+                return;
+            if (facingPreviewUnit != selected)
+            {
+                ClearFacingPreview();
+                facingPreviewUnit = selected;
+                facingPreviewOriginalDirection = selected.FacingDirection;
+            }
+            selected.FaceToward(targetPosition);
+        }
+
+        private void CommitFacingPreview()
+        {
+            facingPreviewUnit = null;
+            facingPreviewOriginalDirection = 0;
+        }
+
+        private void ClearFacingPreview()
+        {
+            if (facingPreviewUnit != null && facingPreviewUnit.IsAlive)
+                facingPreviewUnit.RestoreFacingDirection(facingPreviewOriginalDirection);
+            facingPreviewUnit = null;
+            facingPreviewOriginalDirection = 0;
+        }
+
         private void SelectMovePreview(GridPosition destination)
         {
             if (selected == null || selected.Team != UnitTeam.Player ||
@@ -552,6 +612,7 @@ namespace StellaStair.Input
 
             ClearMovePreview();
             pendingMoveDestination = destination;
+            ApplyFacingPreview(destination);
             pendingMoveFallDamage = selected.CalculateMovementFallDamage(path);
             selected.SetPreviewDamage(pendingMoveFallDamage);
             RefreshSelectionDisplay();
@@ -586,13 +647,16 @@ namespace StellaStair.Input
         {
             if (selected != null)
                 selected.SetPreviewDamage(0);
+            ClearFacingPreview();
             pendingMoveDestination = null;
             pendingMoveFallDamage = 0;
         }
 
         private void RefreshActionButtons()
         {
-            var playerSelection = deployment != null && deployment.Phase == BattlePhase.PlayerTurn &&
+            var locked = deployment != null && deployment.InteractionLocked;
+            var playerSelection = deployment != null && !locked &&
+                                  deployment.Phase == BattlePhase.PlayerTurn &&
                                   selected != null && selected.Team == UnitTeam.Player && selected.IsAlive;
 
             if (attackButton != null)
@@ -602,7 +666,7 @@ namespace StellaStair.Input
                                         !IsAttackMode || pendingAttackTarget.HasValue);
                 attackButton.gameObject.SetActive(showAttackButton);
                 attackButton.interactable = pendingMoveDestination.HasValue
-                    ? selected != null && !selected.IsMoving
+                    ? !locked && selected != null && !selected.IsMoving
                     : CanUseAttackButton;
                 if (attackButtonLabel != null)
                     attackButtonLabel.text = pendingMoveDestination.HasValue
@@ -617,8 +681,8 @@ namespace StellaStair.Input
                 var showAttackCancel = playerSelection && IsAttackMode;
                 var showMoveCancel = playerSelection && pendingMoveDestination.HasValue;
                 moveUndoButton.gameObject.SetActive(showMoveUndo || showAttackCancel || showMoveCancel);
-                moveUndoButton.interactable = showMoveCancel || showAttackCancel ||
-                                              showMoveUndo && selected.CanUndoMovement;
+                moveUndoButton.interactable = !locked && (showMoveCancel || showAttackCancel ||
+                                              showMoveUndo && selected.CanUndoMovement);
                 if (moveUndoButtonLabel != null)
                     moveUndoButtonLabel.text = showMoveCancel
                         ? "MOVE CANCEL"
@@ -631,8 +695,8 @@ namespace StellaStair.Input
                 var playerTurn = deployment.Phase == BattlePhase.PlayerTurn;
                 turnButton.gameObject.SetActive(deploymentPhase || playerTurn);
                 turnButton.interactable = deploymentPhase
-                    ? deployment.CanStartBattle()
-                    : playerTurn && !deployment.Board.HasUnitsResolvingForcedMovement();
+                    ? !locked && deployment.CanStartBattle()
+                    : playerTurn && !locked;
                 if (turnButtonLabel != null)
                     turnButtonLabel.text = deploymentPhase ? "DEPLOY CONFIRM" : "TURN END";
             }
@@ -646,6 +710,7 @@ namespace StellaStair.Input
             ClearAttackPreview();
             pendingAttackTarget = targetPosition;
             pendingAttackTargetsWood = false;
+            ApplyFacingPreview(targetPosition);
 
             BuildAttackPreview(selected, targetPosition);
 
@@ -662,6 +727,7 @@ namespace StellaStair.Input
             ClearAttackPreview();
             pendingAttackTarget = targetPosition;
             pendingAttackTargetsWood = true;
+            ApplyFacingPreview(targetPosition);
             BuildAttackPreview(selected, targetPosition, attackWoodOnly: true);
             RefreshSelectionDisplay();
             RefreshActionButtons();
@@ -706,7 +772,7 @@ namespace StellaStair.Input
                     for (var xOffset = -1; xOffset <= 1; xOffset += 2)
                     {
                         var sidePosition = new GridPosition(
-                            targetPosition.X + xOffset, targetPosition.Y - 1);
+                            targetPosition.X + xOffset, targetPosition.Y);
                         if (!deployment.Board.TryGetOccupant(sidePosition, out var sideUnit) ||
                             sideUnit == null || sideUnit == attacker)
                             continue;
@@ -745,6 +811,7 @@ namespace StellaStair.Input
             }
             previewAffectedUnits.Clear();
             previewDamageByUnit.Clear();
+            ClearFacingPreview();
             pendingAttackTarget = null;
             pendingAttackTargetsWood = false;
             previewKnockbackDestinations.Clear();
@@ -754,6 +821,9 @@ namespace StellaStair.Input
 
         private void PreviewKnockback(TacticalUnit affectedUnit, int direction, int distance)
         {
+            if (affectedUnit == null || affectedUnit.IsObjective || !affectedUnit.IsAlive || distance <= 0)
+                return;
+
             var current = affectedUnit.Position;
             var knockbackFallDamage = 0;
             for (var i = 0; i < distance; i++)

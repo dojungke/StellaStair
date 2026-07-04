@@ -24,8 +24,6 @@ namespace StellaStair.Presentation
                 CreateSampleBombCrates();
             if (battle != null && battle.Board.ObjectiveTilemap == null)
                 CreateSampleObjectives();
-            if (battle != null && battle.Board.DefenseObjectiveTilemap == null)
-                CreateSampleDefenseObjectives();
             var knight = LoadDefinition("Knight");
             var archer = LoadDefinition("Archer");
             var wizard = LoadDefinition("Wizard");
@@ -36,7 +34,7 @@ namespace StellaStair.Presentation
             if (battle != null && battle.PlayerUnits.Count > 1)
                 battle.PlayerUnits[1].Configure(archer, UnitTeam.Player);
             if (battle != null && battle.PlayerUnits.Count < 3)
-                SpawnPlayer("Player Wizard", new Vector3(-2f, 2.5f),
+                SpawnPlayer("Player Wizard", new Vector3(-2f, 3.5f),
                     new Color(0.7f, 0.35f, 1f), wizard);
             if (battle != null && battle.EnemyUnits.Count == 0)
             {
@@ -88,7 +86,7 @@ namespace StellaStair.Presentation
             woodTile.color = new Color(0.55f, 0.3f, 0.12f);
             woodMap.SetTile(new Vector3Int(0, 1, 0), woodTile);
             woodMap.SetTile(new Vector3Int(5, 1, 0), woodTile);
-            board.ConfigureWood(woodMap, 2);
+            board.ConfigureWood(woodMap, board.WoodMaxHealth);
         }
 
         private void CreateSampleCrates()
@@ -147,27 +145,7 @@ namespace StellaStair.Presentation
             objectiveTile.sprite = sprite;
             objectiveTile.color = new Color(1f, 0.82f, 0.12f);
             objectiveMap.SetTile(new Vector3Int(8, 1, 0), objectiveTile);
-            board.ConfigureObjectives(objectiveMap, 8);
-        }
-
-        private void CreateSampleDefenseObjectives()
-        {
-            var board = battle.Board;
-            var objectiveObject = new GameObject(
-                "Defense Objectives", typeof(Tilemap), typeof(TilemapRenderer));
-            objectiveObject.transform.SetParent(board.Grid.transform, false);
-            var objectiveMap = objectiveObject.GetComponent<Tilemap>();
-            objectiveObject.GetComponent<TilemapRenderer>().sortingOrder = 20;
-
-            Sprite sprite = null;
-            if (battle.PlayerUnits.Count > 0 && battle.PlayerUnits[0] != null)
-                sprite = battle.PlayerUnits[0].GetComponent<SpriteRenderer>().sprite;
-            var objectiveTile = ScriptableObject.CreateInstance<Tile>();
-            objectiveTile.hideFlags = HideFlags.DontSave;
-            objectiveTile.sprite = sprite;
-            objectiveTile.color = new Color(0.2f, 0.95f, 1f);
-            objectiveMap.SetTile(new Vector3Int(-1, 1, 0), objectiveTile);
-            board.ConfigureDefenseObjectives(objectiveMap, 12);
+            board.ConfigureObjectives(objectiveMap, board.ObjectiveMaxHealth);
         }
 
         private void SpawnEnemy(string unitName, GridPosition position, Color color, UnitDefinition definition)
@@ -177,7 +155,7 @@ namespace StellaStair.Presentation
                 sprite = battle.PlayerUnits[0].GetComponent<SpriteRenderer>().sprite;
 
             var enemyObject = new GameObject(unitName, typeof(SpriteRenderer), typeof(BoxCollider2D));
-            enemyObject.transform.localScale = new Vector3(0.75f, 1.25f, 1f);
+            enemyObject.transform.localScale = Vector3.one;
             var renderer = enemyObject.GetComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.color = color;
@@ -197,7 +175,7 @@ namespace StellaStair.Presentation
 
             var playerObject = new GameObject(unitName, typeof(SpriteRenderer), typeof(BoxCollider2D));
             playerObject.transform.position = stagingPosition;
-            playerObject.transform.localScale = new Vector3(0.75f, 1.25f, 1f);
+            playerObject.transform.localScale = Vector3.one;
             var renderer = playerObject.GetComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.color = color;
@@ -227,7 +205,7 @@ namespace StellaStair.Presentation
 
             var phase = battle != null ? battle.Phase.ToString() : "Loading";
             GUI.Box(new Rect(16, 16, 680, 100),
-                $"상태: {phase}\n이동 칸 → MOVE CONFIRM / ATK → 대상 → ATK CONFIRM\n예상 낙하 피해는 체력바 표시, Move Reset 이동 취소, Space 턴 종료", style);
+                $"?�태: {phase}\n?�동 �???MOVE CONFIRM / ATK ???�????ATK CONFIRM\n?�상 ?�하 ?�해??체력�??�시, Move Reset ?�동 취소, Space ??종료", style);
 
             if (battle == null) return;
             var y = 124f;
@@ -242,7 +220,7 @@ namespace StellaStair.Presentation
             if (unit == null) return;
             var label = unit.Definition != null ? unit.Definition.DisplayName : unit.name;
             GUI.Box(new Rect(16, y, 320, 28),
-                $"{label}  HP {unit.CurrentHealth}/{unit.MaxHealth}  이동 {unit.RemainingMovement}/{unit.MovementPoints}", style);
+                $"{label}  HP {unit.CurrentHealth}/{unit.MaxHealth}  ?�동 {unit.RemainingMovement}/{unit.MovementPoints}", style);
             y += 30f;
         }
     }

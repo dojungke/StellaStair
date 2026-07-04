@@ -20,10 +20,14 @@ namespace StellaStair.Battle
         [SerializeField, Min(1)] private int defensiveObjectiveRadius = 4;
         [SerializeField, Min(0)] private int defensiveMaxDistanceFromStart = 2;
         [SerializeField, Min(1)] private int defenseTurnsToSurvive = 5;
+        [SerializeField, Min(0)] private int stageClearExperience = 2;
+        [SerializeField, Min(0)] private int enemyKillExperience = 1;
         private readonly List<EnemyIntent> enemyIntents = new();
         private readonly Dictionary<TacticalUnit, GridPosition> enemyStartPositions = new();
         private Coroutine refreshEnemyIntentsRoutine;
         private TacticalBoard subscribedBoard;
+        private int interactionLockCount;
+        private bool stageClearExperienceGranted;
 
         public BattlePhase Phase { get; private set; } = BattlePhase.Deployment;
         public TacticalBoard Board => board;
@@ -35,6 +39,12 @@ namespace StellaStair.Battle
         public IReadOnlyList<EnemyIntent> EnemyIntents => enemyIntents;
         public event Action<BattlePhase> PhaseChanged;
         public event Action EnemyIntentsChanged;
+        public event Action<int> PlayerTurnStarted;
+        public event Action EnemyForcesDefeated;
+        public bool WaitForPendingRounds { get; set; }
+        public int CurrentPlayerTurn { get; private set; }
+        public bool InteractionLocked => interactionLockCount > 0 ||
+            board != null && board.HasUnitsResolvingForcedMovement();
 
         private void Awake()
         {
@@ -65,6 +75,8 @@ namespace StellaStair.Battle
             stageType = type;
             defenseTurnsToSurvive = Mathf.Max(1, turnsToSurvive);
             DefenseTurnsSurvived = 0;
+            if (stageType == TacticalStageType.Defense)
+                board?.SpawnDefenseObjectiveMarkers();
             ObserveObjectives();
             CheckBattleEnd();
             if (Phase == BattlePhase.PlayerTurn)
@@ -96,8 +108,18 @@ namespace StellaStair.Battle
 
         public bool TryDeploy(TacticalUnit unit, GridPosition position)
         {
-            return Phase == BattlePhase.Deployment && unit != null && unit.Team == UnitTeam.Player &&
+            return !InteractionLocked && Phase == BattlePhase.Deployment &&
+                   unit != null && unit.Team == UnitTeam.Player &&
                    playerUnits.Contains(unit) && unit.TryPlace(board, position, true);
+        }
+
+        public bool TrySwapDeployment(TacticalUnit first, TacticalUnit second)
+        {
+            return !InteractionLocked && Phase == BattlePhase.Deployment &&
+                   first != null && second != null && first != second &&
+                   first.Team == UnitTeam.Player && second.Team == UnitTeam.Player &&
+                   playerUnits.Contains(first) && playerUnits.Contains(second) &&
+                   first.TrySwapPlacementWith(second, true);
         }
 
         public bool CanStartBattle()
@@ -115,7 +137,7 @@ namespace StellaStair.Battle
 
         public bool StartBattle()
         {
-            if (!CanStartBattle())
+            if (InteractionLocked || !CanStartBattle())
                 return false;
             StartCoroutine(OpeningEnemyMoveRoutine());
             return true;
@@ -157,10 +179,20 @@ namespace StellaStair.Battle
 
         public bool EndPlayerTurn()
         {
-            if (Phase != BattlePhase.PlayerTurn)
+            if (InteractionLocked || Phase != BattlePhase.PlayerTurn)
                 return false;
             StartCoroutine(EnemyTurnRoutine());
             return true;
+        }
+
+        public void PushInteractionLock()
+        {
+            interactionLockCount++;
+        }
+
+        public void PopInteractionLock()
+        {
+            interactionLockCount = Mathf.Max(0, interactionLockCount - 1);
         }
 
         public IEnumerable<TacticalUnit> GetAttackableEnemies(TacticalUnit attacker)
@@ -524,16 +556,41 @@ namespace StellaStair.Battle
         private void OnUnitDied(TacticalUnit unit)
         {
             if (unit != null)
+            {
+                AwardEnemyKillExperience(unit);
                 enemyStartPositions.Remove(unit);
+            }
             enemyIntents.RemoveAll(intent => intent.Enemy == null || !intent.Enemy.IsAlive);
             EnemyIntentsChanged?.Invoke();
+            if (!HasLivingUnit(enemyUnits))
+                EnemyForcesDefeated?.Invoke();
             CheckBattleEnd();
         }
 
+        private void AwardEnemyKillExperience(TacticalUnit deadUnit)
+        {
+            if (deadUnit == null || deadUnit.Team != UnitTeam.Enemy)
+                return;
+            var killer = deadUnit.LastDamageSource;
+            if (killer == null || killer.Team != UnitTeam.Player || !killer.IsAlive)
+                return;
+            killer.GainExperience(enemyKillExperience);
+        }
+
+        private void AwardStageClearExperience()
+        {
+            if (stageClearExperienceGranted)
+                return;
+            stageClearExperienceGranted = true;
+            foreach (var player in playerUnits)
+                if (player != null && player.IsAlive)
+                    player.GainExperience(stageClearExperience);
+        }
         private bool CheckBattleEnd()
         {
             if (stageType == TacticalStageType.Attack &&
-                (board == null || !HasLivingUnit(board.ObjectiveUnits)))
+                (board == null || !HasLivingUnit(board.ObjectiveUnits)) &&
+                !WaitForPendingRounds)
             {
                 SetPhase(BattlePhase.Victory);
                 return true;
@@ -547,14 +604,15 @@ namespace StellaStair.Battle
                     return true;
                 }
 
-                if (DefenseTurnsSurvived >= defenseTurnsToSurvive)
+                if (DefenseTurnsSurvived >= defenseTurnsToSurvive && !WaitForPendingRounds)
                 {
                     SetPhase(BattlePhase.Victory);
                     return true;
                 }
             }
 
-            if (stageType == TacticalStageType.Elimination && !HasLivingUnit(enemyUnits))
+            if (stageType == TacticalStageType.Elimination && !HasLivingUnit(enemyUnits) &&
+                !WaitForPendingRounds)
             {
                 SetPhase(BattlePhase.Victory);
                 return true;
@@ -577,8 +635,25 @@ namespace StellaStair.Battle
 
         private void SetPhase(BattlePhase phase)
         {
+            if (Phase == phase)
+                return;
+
             Phase = phase;
+            if (phase == BattlePhase.Victory)
+                AwardStageClearExperience();
             PhaseChanged?.Invoke(phase);
+            if (phase == BattlePhase.PlayerTurn)
+            {
+                CurrentPlayerTurn++;
+                PlayerTurnStarted?.Invoke(CurrentPlayerTurn);
+            }
+        }
+
+        public void RefreshEnemyIntentsForCurrentBoard()
+        {
+            ObserveObjectives();
+            if (Phase == BattlePhase.PlayerTurn)
+                GenerateEnemyIntents();
         }
 
         private void OnDestroy()
