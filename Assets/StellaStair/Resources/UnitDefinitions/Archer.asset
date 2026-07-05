@@ -25,6 +25,7 @@ MonoBehaviour:
   <CanPierceUnits>k__BackingField: 1
   <AreaKnockbackRadius>k__BackingField: 0
   <AreaKnockbackDistance>k__BackingField: 0
+  <UnitSprite>k__BackingField: {fileID: 0}
   <AnimationPrefab>k__BackingField: {fileID: 0}
   <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
   <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}

@@ -24,6 +24,7 @@ namespace StellaStair.Units
         [SerializeField] private string levelUpTrigger = "LevelUp";
         [SerializeField] private string facingParameter = "Facing";
         [SerializeField] private bool flipRootWithFacing = true;
+        [SerializeField] private bool lockRootLocalPosition = true;
 
         [Header("Procedural Walk")]
         [SerializeField] private bool proceduralWalkMotion = false;
@@ -72,6 +73,12 @@ namespace StellaStair.Units
             baseLocalRotation = transform.localRotation;
             SetFacing(unit.FacingDirection);
             PlayIdle();
+        }
+
+        public void CaptureCurrentLocalPose()
+        {
+            baseLocalPosition = transform.localPosition;
+            baseLocalRotation = transform.localRotation;
         }
 
         public void PlayIdle()
@@ -131,6 +138,13 @@ namespace StellaStair.Units
             var sway = Mathf.Sin(phase) * walkSwayAngle;
             transform.localPosition = baseLocalPosition + Vector3.up * bob;
             transform.localRotation = baseLocalRotation * Quaternion.Euler(0f, 0f, sway);
+        }
+
+        private void LateUpdate()
+        {
+            if (!lockRootLocalPosition || proceduralWalkMotion)
+                return;
+            transform.localPosition = baseLocalPosition;
         }
 
         private void ResetProceduralPose()

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using StellaStair.Battle;
 using StellaStair.Grid;
 using StellaStair.Presentation;
@@ -446,7 +446,7 @@ namespace StellaStair.Input
 
             if (pendingMoveDestination.HasValue)
             {
-                highlighter.ShowMovePreview(deployment.Board, reachable.Keys, selected.Position, pendingMoveDestination.Value);
+                highlighter.ShowMovePreview(deployment.Board, reachable.Keys, selected.Position, pendingMoveDestination.Value, selected);
                 return;
             }
 
@@ -911,3 +911,4 @@ namespace StellaStair.Input
         }
     }
 }
+

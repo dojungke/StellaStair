@@ -49,8 +49,13 @@ namespace StellaStair.Units
         {
             if (barRoot == null || bodyCollider == null)
                 return;
+
             var bounds = bodyCollider.bounds;
-            barRoot.position = new Vector3(bounds.center.x, bounds.max.y + verticalOffset, transform.position.z);
+            var top = bounds.max.y;
+            if (unit != null && unit.TryGetVisualBounds(out var visualBounds))
+                top = Mathf.Max(top, visualBounds.max.y);
+
+            barRoot.position = new Vector3(bounds.center.x, top + verticalOffset, transform.position.z);
         }
 
         private void CreateBar()

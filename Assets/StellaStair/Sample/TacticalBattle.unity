@@ -689,6 +689,8 @@ MonoBehaviour:
   defensiveObjectiveRadius: 4
   defensiveMaxDistanceFromStart: 2
   defenseTurnsToSurvive: 5
+  stageClearExperience: 2
+  enemyKillExperience: 1
 --- !u!114 &169749509
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -873,6 +875,9 @@ MonoBehaviour:
   fallbackMovementPoints: 5
   fallbackMoveSpeed: 5
   fallbackMaxHealth: 10
+  currentLevel: 1
+  currentExperience: 0
+  experienceToNextLevel: 3
   fallbackAttackDamage: 3
   fallbackAttackDistanceRule: 0
   fallbackMinimumAttackRange: 0
@@ -884,6 +889,11 @@ MonoBehaviour:
   fallbackAreaKnockbackDistance: 0
   ladderEntryPause: 0.18
   collisionImpactDuration: 0.16
+  fallbackUnitWidthInCells: 1
+  fallbackUnitHeightInCells: 1
+  animationRoot: {fileID: 0}
+  hideSpriteRendererWhenAnimationPrefabExists: 1
+  autoAlignAnimationToCollider: 1
 --- !u!61 &345947319
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1753,6 +1763,9 @@ MonoBehaviour:
   fallbackMovementPoints: 5
   fallbackMoveSpeed: 5
   fallbackMaxHealth: 10
+  currentLevel: 1
+  currentExperience: 0
+  experienceToNextLevel: 3
   fallbackAttackDamage: 3
   fallbackAttackDistanceRule: 0
   fallbackMinimumAttackRange: 0
@@ -1764,6 +1777,11 @@ MonoBehaviour:
   fallbackAreaKnockbackDistance: 0
   ladderEntryPause: 0.18
   collisionImpactDuration: 0.16
+  fallbackUnitWidthInCells: 1
+  fallbackUnitHeightInCells: 1
+  animationRoot: {fileID: 0}
+  hideSpriteRendererWhenAnimationPrefabExists: 1
+  autoAlignAnimationToCollider: 1
 --- !u!61 &1377840022
 BoxCollider2D:
   m_ObjectHideFlags: 0

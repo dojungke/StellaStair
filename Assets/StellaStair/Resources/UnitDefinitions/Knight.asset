@@ -25,10 +25,11 @@ MonoBehaviour:
   <CanPierceUnits>k__BackingField: 0
   <AreaKnockbackRadius>k__BackingField: 0
   <AreaKnockbackDistance>k__BackingField: 0
+  <UnitSprite>k__BackingField: {fileID: 0}
   <AnimationPrefab>k__BackingField: {fileID: -8653719598885068355, guid: 9acf0e06f2542e54aa8681a465eccaf4, type: 3}
   <AnimationController>k__BackingField: {fileID: 9100000, guid: d6a4f948d4e79c5428a97a40f8cac420, type: 2}
   <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
   <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}
   <UnitWidthInCells>k__BackingField: 0.8
-  <UnitHeightInCells>k__BackingField: 1.2
+  <UnitHeightInCells>k__BackingField: 2
   <DefaultFacingDirection>k__BackingField: -1

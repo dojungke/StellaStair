@@ -28,6 +28,9 @@ namespace StellaStair.Editor
             var idle = LoadOrCreateClip(KnightIdleClipPath, CreateIdleClip);
             var walk = LoadOrCreateClip(KnightWalkClipPath, CreateWalkClip);
             var attack = LoadOrCreateClip(KnightAttackClipPath, CreateAttackClip);
+            RemoveRootPositionCurves(idle);
+            RemoveRootPositionCurves(walk);
+            RemoveRootPositionCurves(attack);
             var controller = LoadOrCreateController(idle, walk, attack);
             AssignControllerToKnight(controller);
             AssetDatabase.SaveAssets();
@@ -47,7 +50,6 @@ namespace StellaStair.Editor
         {
             var clip = new AnimationClip { name = "Knight_Idle", frameRate = 30f };
             clip.wrapMode = WrapMode.Loop;
-            SetVectorCurve(clip, "m_LocalPosition", 0f, Vector3.zero, 0.6f, Vector3.zero);
             SetRotationCurve(clip, 0f, 0f, 0.6f, 0f);
             return clip;
         }
@@ -56,8 +58,6 @@ namespace StellaStair.Editor
         {
             var clip = new AnimationClip { name = "Knight_Walk", frameRate = 30f };
             clip.wrapMode = WrapMode.Loop;
-            SetVectorCurve(clip, "m_LocalPosition", 0f, Vector3.zero, 0.12f, Vector3.up * 0.045f,
-                0.24f, Vector3.zero, 0.36f, Vector3.up * 0.045f, 0.48f, Vector3.zero);
             SetRotationCurve(clip, 0f, -3.5f, 0.12f, 3.5f, 0.24f, -3.5f, 0.36f, 3.5f, 0.48f, -3.5f);
             return clip;
         }
@@ -66,12 +66,17 @@ namespace StellaStair.Editor
         {
             var clip = new AnimationClip { name = "Knight_Attack", frameRate = 30f };
             clip.wrapMode = WrapMode.Once;
-            SetVectorCurve(clip, "m_LocalPosition", 0f, Vector3.zero, 0.08f, Vector3.up * 0.035f,
-                0.18f, Vector3.zero);
             SetRotationCurve(clip, 0f, 0f, 0.06f, -8f, 0.12f, 5f, 0.18f, 0f);
             return clip;
         }
 
+        private static void RemoveRootPositionCurves(AnimationClip clip)
+        {
+            if (clip == null)
+                return;
+            clip.SetCurve(string.Empty, typeof(Transform), "m_LocalPosition", null);
+            EditorUtility.SetDirty(clip);
+        }
         private static AnimatorController LoadOrCreateController(AnimationClip idle, AnimationClip walk, AnimationClip attack)
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(KnightControllerPath);

@@ -43,7 +43,9 @@ namespace StellaStair.Units
 
         private TacticalBoard board;
         private BoxCollider2D bodyCollider;
+        private SpriteRenderer bodyRenderer;
         private SpriteRenderer previewRenderer;
+        private SpriteRenderer unitSpriteRenderer;
         private Coroutine attackPreviewBlinkRoutine;
         private Coroutine selectionHighlightRoutine;
         private Coroutine levelUpEffectRoutine;
@@ -53,6 +55,7 @@ namespace StellaStair.Units
         private TacticalUnitAnimator unitAnimator;
         private GameObject animationPrefabInstance;
         private GameObject animationPrefabSource;
+        private Sprite definitionSpriteSource;
         private bool isImpactReserved;
         private TacticalUnit reservedImpactTarget;
         public UnitDefinition Definition => definition;
@@ -123,10 +126,10 @@ namespace StellaStair.Units
 
         private void Awake()
         {
-            // Sprite가 에디터에서 나중에 지정되면 Unity가 Collider를 0에 가깝게
-            // 직렬화할 수 있다. 선택 입력이 사라지지 않도록 최소 클릭 영역을 보장한다.
+            // Ensure a minimum click area even if Unity serialized a tiny collider before a sprite was assigned.
             bodyCollider = GetComponent<BoxCollider2D>();
-            previewRenderer = GetComponent<SpriteRenderer>();
+            bodyRenderer = GetComponent<SpriteRenderer>();
+            previewRenderer = bodyRenderer;
             ApplyUnitBodySize();
             CurrentHealth = MaxHealth;
             RemainingMovement = MovementPoints;
@@ -162,12 +165,22 @@ namespace StellaStair.Units
                 animationPrefabInstance = null;
                 animationPrefabSource = null;
                 unitAnimator = GetComponentInChildren<TacticalUnitAnimator>();
+                ApplyDefinitionSprite();
+                ApplyUnitBodySize();
                 if (previewRenderer != null)
                     previewRenderer.enabled = true;
                 unitAnimator?.ApplyController(definition != null ? definition.AnimationController : null);
                 unitAnimator?.Bind(this);
                 SetFacingDirection(FacingDirection);
                 return;
+            }
+
+            if (unitSpriteRenderer != null)
+                unitSpriteRenderer.enabled = false;
+            if (bodyRenderer != null)
+            {
+                previewRenderer = bodyRenderer;
+                bodyRenderer.enabled = true;
             }
 
             if (animationPrefabSource != prefab)
@@ -214,9 +227,7 @@ namespace StellaStair.Units
             }
 
             var targetSize = GetUnitWorldSize();
-            var fitScale = Mathf.Min(
-                targetSize.x / bounds.size.x,
-                targetSize.y / bounds.size.y);
+            var fitScale = targetSize.x / bounds.size.x;
             fitScale *= GetAnimationScaleMultiplier();
             animationPrefabInstance.transform.localScale = GetParentCompensatedScale(fitScale);
         }
@@ -272,11 +283,107 @@ namespace StellaStair.Units
             bodyCollider.size = size;
             bodyCollider.offset = new Vector2(0f, size.y * 0.5f - 0.5f);
 
-            if (previewRenderer != null && (definition == null || definition.AnimationPrefab == null))
+            if (previewRenderer == null || (definition != null && definition.AnimationPrefab != null))
+                return;
+
+            if (definition != null && definition.UnitSprite != null)
+            {
+                previewRenderer.drawMode = SpriteDrawMode.Simple;
+                FitUnitSpriteRenderer(size);
+                return;
+            }
+
+            if (CanResizeSpriteRenderer(previewRenderer.sprite))
             {
                 previewRenderer.drawMode = SpriteDrawMode.Sliced;
                 previewRenderer.size = size;
             }
+        }
+        private void ApplyDefinitionSprite()
+        {
+            var sprite = definition != null ? definition.UnitSprite : null;
+            if (sprite == null)
+            {
+                if (bodyRenderer != null)
+                {
+                    bodyRenderer.enabled = true;
+                    previewRenderer = bodyRenderer;
+                }
+                return;
+            }
+
+            var renderer = GetOrCreateUnitSpriteRenderer();
+            if (renderer == null)
+                return;
+
+            if (bodyRenderer != null)
+                bodyRenderer.enabled = false;
+
+            previewRenderer = renderer;
+            definitionSpriteSource = sprite;
+            previewRenderer.sprite = sprite;
+            previewRenderer.color = Color.white;
+            previewRenderer.drawMode = SpriteDrawMode.Simple;
+            previewRenderer.enabled = true;
+        }
+
+        private SpriteRenderer GetOrCreateUnitSpriteRenderer()
+        {
+            if (unitSpriteRenderer != null)
+                return unitSpriteRenderer;
+
+            var visualObject = new GameObject("Unit Sprite Visual");
+            visualObject.transform.SetParent(transform, false);
+            unitSpriteRenderer = visualObject.AddComponent<SpriteRenderer>();
+            if (bodyRenderer != null)
+            {
+                unitSpriteRenderer.sortingLayerID = bodyRenderer.sortingLayerID;
+                unitSpriteRenderer.sortingOrder = bodyRenderer.sortingOrder;
+            }
+            return unitSpriteRenderer;
+        }
+
+        private void FitUnitSpriteRenderer(Vector2 targetSize)
+        {
+            if (previewRenderer == null || previewRenderer.sprite == null || bodyCollider == null)
+                return;
+
+            previewRenderer.transform.localScale = GetSpriteFitScale(previewRenderer.sprite, targetSize);
+            previewRenderer.transform.localRotation = Quaternion.identity;
+            AlignUnitSpriteRendererToBody();
+        }
+
+        private void AlignUnitSpriteRendererToBody()
+        {
+            if (previewRenderer == null || previewRenderer != unitSpriteRenderer ||
+                previewRenderer.sprite == null || bodyCollider == null)
+                return;
+
+            var spriteBounds = previewRenderer.sprite.bounds;
+            var visualScale = previewRenderer.transform.localScale;
+            var centerX = previewRenderer.flipX ? -spriteBounds.center.x : spriteBounds.center.x;
+            var minY = spriteBounds.min.y;
+            var colliderBottom = bodyCollider.offset.y - bodyCollider.size.y * 0.5f;
+
+            previewRenderer.transform.localPosition = new Vector3(
+                bodyCollider.offset.x - centerX * visualScale.x,
+                colliderBottom - minY * visualScale.y,
+                0f);
+        }
+
+        private static Vector3 GetSpriteFitScale(Sprite sprite, Vector2 targetSize)
+        {
+            if (sprite == null || sprite.bounds.size.x <= 0.0001f || sprite.bounds.size.y <= 0.0001f)
+                return Vector3.one;
+
+            var fitScale = targetSize.x / sprite.bounds.size.x;
+            return new Vector3(fitScale, fitScale, 1f);
+        }
+        private static bool CanResizeSpriteRenderer(Sprite sprite)
+        {
+            if (sprite == null)
+                return true;
+            return sprite.vertices == null || sprite.vertices.Length <= 4;
         }
 
         private Vector2 GetUnitWorldSize()
@@ -289,6 +396,20 @@ namespace StellaStair.Units
                 Mathf.Max(0.1f, UnitHeightInCells) * Mathf.Abs(cellSize.y));
         }
 
+        public bool TryGetVisualBounds(out Bounds bounds)
+        {
+            bounds = default;
+            if (animationPrefabInstance != null && TryGetAnimationRendererBounds(out bounds))
+                return true;
+
+            if (previewRenderer != null && previewRenderer.enabled && previewRenderer.sprite != null)
+            {
+                bounds = previewRenderer.bounds;
+                return true;
+            }
+            return false;
+        }
+
         private void ApplyAnimationLocalPosition()
         {
             if (animationPrefabInstance == null || definition == null)
@@ -299,6 +420,8 @@ namespace StellaStair.Units
             if (autoAlignAnimationToCollider && bodyCollider != null)
                 localPosition += GetAnimationAutoAlignOffset();
             animationPrefabInstance.transform.localPosition = localPosition;
+            if (unitAnimator != null && unitAnimator.transform == animationPrefabInstance.transform)
+                unitAnimator.CaptureCurrentLocalPose();
         }
 
         private Vector3 GetAnimationAutoAlignOffset()
@@ -330,6 +453,8 @@ namespace StellaStair.Units
             FacingDirection = normalized;
             var visualDirection = normalized * DefaultFacingDirection;
             unitAnimator?.SetFacing(visualDirection);
+            if (animationPrefabInstance != null)
+                ApplyAnimationLocalPosition();
             if (previewRenderer != null)
                 previewRenderer.flipX = visualDirection < 0;
         }
@@ -949,7 +1074,6 @@ namespace StellaStair.Units
                                     fallDamage + Mathf.Max(0, fallDistance - 1));
                             blocker.isImpactReserved = true;
                             reservedImpactTarget = blocker;
-                            SetFacingDirection(direction);
                             StartCoroutine(FallPushCollisionRoutine(
                                 path, next, blocker, direction, impactFallDamage));
                             return true;
@@ -957,7 +1081,6 @@ namespace StellaStair.Units
 
                         var upperDamage = blocker.CurrentHealth;
                         var lowerDamage = CurrentHealth;
-                        SetFacingDirection(direction);
                         StartCoroutine(FallCollisionRoutine(
                             path, next, blocker, upperDamage, lowerDamage));
                         return true;
@@ -977,7 +1100,6 @@ namespace StellaStair.Units
                         return false;
                     }
 
-                    SetFacingDirection(direction);
                     var horizontalImpactPosition = blocker != null
                         ? blocker.Position
                         : new GridPosition(current.X + direction, current.Y);
@@ -990,7 +1112,6 @@ namespace StellaStair.Units
                 {
                     if (board != null)
                         board.RemoveOccupancy(this);
-                    SetFacingDirection(direction);
                     StartCoroutine(FallIntoVoidRoutine(path, direction));
                     return true;
                 }
@@ -1003,7 +1124,6 @@ namespace StellaStair.Units
             if (path.Count == 0 || !board.TryOccupy(this, current))
                 return false;
 
-            SetFacingDirection(direction);
             var resolvedFallDamage = suppressFallDamage
                 ? 0
                 : Mathf.Min(MaxHealth, fallDamage);
@@ -1024,9 +1144,9 @@ namespace StellaStair.Units
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
             foreach (var step in path)
-                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed, false);
 
-            yield return MoveStepRoutine(GetStandingWorldPosition(collisionPosition), speed);
+            yield return MoveStepRoutine(GetStandingWorldPosition(collisionPosition), speed, false);
             yield return PlayCollisionImpactRoutine(lowerUnit);
 
             ReleaseImpactReservation();
@@ -1054,7 +1174,7 @@ namespace StellaStair.Units
                 yield break;
 
             if (Position != collisionPosition)
-                yield return MoveStepRoutine(GetStandingWorldPosition(Position), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(Position), speed, false);
 
             IsMoving = false;
             unitAnimator?.PlayIdle();
@@ -1081,10 +1201,10 @@ namespace StellaStair.Units
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
             foreach (var step in path)
-                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed, false);
 
             var impactWorld = GetStandingWorldPosition(collisionPosition);
-            yield return MoveStepRoutine(impactWorld, speed);
+            yield return MoveStepRoutine(impactWorld, speed, false);
             yield return PlayCollisionImpactRoutine(lowerUnit);
 
             if (lowerUnit != null && lowerUnit.IsAlive)
@@ -1101,7 +1221,7 @@ namespace StellaStair.Units
             }
             else
             {
-                yield return MoveStepRoutine(GetStandingWorldPosition(Position), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(Position), speed, false);
             }
 
             IsMoving = false;
@@ -1157,7 +1277,7 @@ namespace StellaStair.Units
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
             foreach (var step in path)
-                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed, false);
 
             var standingWorld = GetStandingWorldPosition(returnPosition);
             var collisionWorld = GetStandingWorldPosition(collisionPosition);
@@ -1270,7 +1390,7 @@ namespace StellaStair.Units
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
 
             foreach (var step in path)
-                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed, false);
 
             Position = destination;
             IsMoving = false;
@@ -1287,7 +1407,7 @@ namespace StellaStair.Units
             unitAnimator?.PlayMove();
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
-            yield return MoveStepRoutine(GetStandingWorldPosition(destination), speed);
+            yield return MoveStepRoutine(GetStandingWorldPosition(destination), speed, false);
             Position = destination;
             IsMoving = false;
             unitAnimator?.PlayIdle();
@@ -1315,7 +1435,7 @@ namespace StellaStair.Units
             MoveStarted?.Invoke(this);
             var speed = definition != null ? definition.MoveSpeed : fallbackMoveSpeed;
             foreach (var step in path)
-                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed);
+                yield return MoveStepRoutine(GetStandingWorldPosition(step), speed, false);
 
             var start = transform.position;
             var target = start + new Vector3(
@@ -1339,7 +1459,7 @@ namespace StellaStair.Units
             transform.position = to;
         }
 
-        private IEnumerator MoveStepRoutine(Vector3 target, float speed)
+        private IEnumerator MoveStepRoutine(Vector3 target, float speed, bool updateFacing = true)
         {
             var start = transform.position;
             var distance = Vector3.Distance(start, target);
@@ -1347,7 +1467,7 @@ namespace StellaStair.Units
             var elapsed = 0f;
             var heightDelta = target.y - start.y;
             var horizontalDelta = target.x - start.x;
-            if (Mathf.Abs(horizontalDelta) > 0.01f)
+            if (updateFacing && Mathf.Abs(horizontalDelta) > 0.01f)
                 SetFacingDirection(horizontalDelta > 0f ? 1 : -1);
 
             while (elapsed < duration)
@@ -1359,12 +1479,12 @@ namespace StellaStair.Units
 
                 if (heightDelta > 0.01f)
                 {
-                    // 오를 때는 발을 먼저 단차 높이까지 올린 뒤 전진한다.
+                    // Step up: raise vertically before completing the horizontal move.
                     verticalT = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.65f));
                 }
                 else if (heightDelta < -0.01f)
                 {
-                    // 내려갈 때는 몸을 먼저 앞으로 보낸 뒤 부드럽게 착지한다.
+                    // Step down: move forward first, then land smoothly.
                     verticalT = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.35f) / 0.65f));
                 }
                 else

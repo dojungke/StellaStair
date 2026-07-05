@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using StellaStair.Grid;
 using UnityEngine;
 
@@ -226,6 +226,26 @@ namespace StellaStair.Presentation
                 GetMarkerWorldPosition(board, position), board, position, color, scale);
         }
 
+        private void CreateMovePreviewGhost(TacticalBoard board, GridPosition destination, TacticalUnit unit)
+        {
+            if (unit == null)
+            {
+                CreateMarker(board, destination, knockbackColor);
+                return;
+            }
+
+            var ghost = unit.CreateMovePreviewGhost(0.45f, sortingOrder + 30);
+            if (ghost == null)
+            {
+                CreateMarker(board, destination, knockbackColor);
+                return;
+            }
+
+            ghost.transform.SetParent(transform);
+            ghost.transform.position = unit.GetPreviewStandingWorldPosition(destination);
+            markers.Add(ghost);
+        }
+
         private void CreateMarkerAtWorld(
             Vector3 worldPosition, TacticalBoard board, GridPosition position,
             Color color, float scale)
@@ -272,3 +292,4 @@ namespace StellaStair.Presentation
         }
     }
 }
+

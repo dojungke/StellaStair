@@ -25,12 +25,15 @@ namespace StellaStair.Units
         [field: SerializeField] public bool CanPierceUnits { get; private set; } = false;
         [field: SerializeField, Min(0)] public int AreaKnockbackRadius { get; private set; } = 0;
         [field: SerializeField, Min(0)] public int AreaKnockbackDistance { get; private set; } = 0;
+        [field: SerializeField] public Sprite UnitSprite { get; private set; }
         [field: SerializeField] public GameObject AnimationPrefab { get; private set; }
         [field: SerializeField] public RuntimeAnimatorController AnimationController { get; private set; }
         [field: SerializeField] public Vector3 AnimationLocalOffset { get; private set; } = Vector3.zero;
         [field: SerializeField] public Vector3 AnimationLocalScale { get; private set; } = Vector3.one;
-        [field: SerializeField, Min(0.1f)] public float UnitWidthInCells { get; private set; } = 1f;
-        [field: SerializeField, Min(0.1f)] public float UnitHeightInCells { get; private set; } = 1f;
+        [field: SerializeField, Min(0.1f), Tooltip("Unit visual width in tile cells. 1 = one tile wide, 2 = two tiles wide. Aspect ratio is preserved.")]
+        public float UnitWidthInCells { get; private set; } = 1f;
+        [field: SerializeField, Min(0.1f), Tooltip("Unit collider/selection height in tile cells. 1 = one tile tall.")]
+        public float UnitHeightInCells { get; private set; } = 1f;
         [field: SerializeField] public int DefaultFacingDirection { get; private set; } = 1;
 
         public void Configure(string displayName, int movementPoints, float moveSpeed,
