@@ -1,0 +1,10 @@
+Unit,AttackMode,TargetRangeId,EffectRangeId
+Knight,Default,1,1
+Knight,Thrust,5,1
+Archer,Default,2,1
+Archer,PiercingArrow,6,6
+Archer,BowStrike,7,1
+Archer,Harpoon,8,1
+Wizard,Default,3,2
+EnemyGuard,Default,1,1
+EnemySoldier,Default,4,1

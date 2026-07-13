@@ -24,6 +24,8 @@ namespace StellaStair.Grid
         [SerializeField, Min(1)] private int woodMaxHealth = 2;
         [SerializeField, Min(1)] private int objectiveMaxHealth = 8;
         [SerializeField, Min(1)] private int defenseObjectiveMaxHealth = 12;
+        [SerializeField] private Sprite objectiveSpriteOverride;
+        [SerializeField] private Sprite defenseObjectiveSpriteOverride;
         [SerializeField, Min(0)] private int maximumStepUp = 1;
         [SerializeField, Min(0)] private int maximumDrop = 2;
 
@@ -31,6 +33,7 @@ namespace StellaStair.Grid
         private readonly Dictionary<Vector3Int, int> woodHealth = new();
         private readonly List<TacticalUnit> objectiveUnits = new();
         private readonly List<TacticalUnit> defenseObjectiveUnits = new();
+        private bool objectiveSettingsConfigured;
         private static readonly int[] HorizontalDirections = { -1, 1 };
         private static Sprite explosionSprite;
 
@@ -58,10 +61,10 @@ namespace StellaStair.Grid
         public int BombCrateExplosionDamage => objectDatabase != null
             ? objectDatabase.BombCrateExplosionDamage
             : 3;
-        public int ObjectiveMaxHealth => objectDatabase != null
+        public int ObjectiveMaxHealth => !objectiveSettingsConfigured && objectDatabase != null
             ? objectDatabase.AttackObjectiveMaxHealth
             : objectiveMaxHealth;
-        public int DefenseObjectiveMaxHealth => objectDatabase != null
+        public int DefenseObjectiveMaxHealth => !objectiveSettingsConfigured && objectDatabase != null
             ? objectDatabase.DefenseObjectiveMaxHealth
             : defenseObjectiveMaxHealth;
         public IReadOnlyList<TacticalUnit> ObjectiveUnits => objectiveUnits;
@@ -70,11 +73,13 @@ namespace StellaStair.Grid
         private void Awake()
         {
             if (grid == null || walkableTilemap == null)
-                throw new InvalidOperationException($"{name}: Grid와 Walkable Tilemap을 연결해야 합니다.");
+                throw new InvalidOperationException($"{name}: Grid?� Walkable Tilemap???�결?�야 ?�니??");
             InitializeWoodHealth();
             SpawnCratesFromTilemap(crateTilemap, false);
             SpawnCratesFromTilemap(bombCrateTilemap, true);
-            SpawnObjectivesFromTilemap(objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
+            SpawnObjectivesFromTilemap(
+                objectiveTilemap, objectiveUnits,
+                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
         }
 
         public void Configure(UnityEngine.Grid targetGrid, Tilemap walkable, Tilemap deployment)
@@ -87,6 +92,17 @@ namespace StellaStair.Grid
         public void ConfigureObjectDatabase(TacticalObjectDatabase database)
         {
             objectDatabase = database;
+        }
+
+        public void ConfigureObjectiveSettings(
+            int attackMaxHealth, int defenseMaxHealth,
+            Sprite attackSprite, Sprite defenseSprite)
+        {
+            objectiveSettingsConfigured = true;
+            objectiveMaxHealth = Mathf.Max(1, attackMaxHealth);
+            defenseObjectiveMaxHealth = Mathf.Max(1, defenseMaxHealth);
+            objectiveSpriteOverride = attackSprite;
+            defenseObjectiveSpriteOverride = defenseSprite;
         }
 
         public void ConfigureLadder(Tilemap ladders) => ladderTilemap = ladders;
@@ -118,7 +134,8 @@ namespace StellaStair.Grid
             objectiveMaxHealth = Mathf.Max(1, maxHealth);
             if (Application.isPlaying)
                 SpawnObjectivesFromTilemap(
-                    objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
+                    objectiveTilemap, objectiveUnits,
+                    "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
         }
 
         public void ConfigureDefenseObjectives(Tilemap objectives, int maxHealth = 12)
@@ -131,7 +148,8 @@ namespace StellaStair.Grid
         {
             SpawnCrateMarkers();
             SpawnObjectivesFromTilemap(
-                objectiveTilemap, objectiveUnits, "Attack Objective", ObjectiveMaxHealth);
+                objectiveTilemap, objectiveUnits,
+                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
         }
 
         public void SpawnCrateMarkers()
@@ -144,7 +162,7 @@ namespace StellaStair.Grid
         {
             SpawnObjectivesFromTilemap(
                 defenseObjectiveTilemap, defenseObjectiveUnits,
-                "Defense Objective", DefenseObjectiveMaxHealth);
+                "Defense Objective", DefenseObjectiveMaxHealth, defenseObjectiveSpriteOverride);
         }
 
         private void SpawnCratesFromTilemap(Tilemap source, bool explosive)
@@ -321,7 +339,8 @@ namespace StellaStair.Grid
         }
 
         private void SpawnObjectivesFromTilemap(
-            Tilemap source, List<TacticalUnit> destination, string objectName, int maxHealth)
+            Tilemap source, List<TacticalUnit> destination,
+            string objectName, int maxHealth, Sprite spriteOverride)
         {
             if (source == null || grid == null || walkableTilemap == null)
                 return;
@@ -342,7 +361,7 @@ namespace StellaStair.Grid
                     typeof(SpriteRenderer), typeof(BoxCollider2D));
                 targetObject.transform.localScale = new Vector3(0.95f, 0.95f, 1f);
                 var renderer = targetObject.GetComponent<SpriteRenderer>();
-                renderer.sprite = source.GetSprite(cell);
+                renderer.sprite = spriteOverride != null ? spriteOverride : source.GetSprite(cell);
                 renderer.color = source.GetColor(cell);
                 renderer.sortingOrder = 19;
                 targetObject.GetComponent<BoxCollider2D>().size = Vector2.one;
@@ -394,7 +413,7 @@ namespace StellaStair.Grid
             return health;
         }
 
-        public bool DamageWood(GridPosition position, int damage)
+        public bool DamageWood(GridPosition position, int damage, TacticalUnit source = null)
         {
             if (damage <= 0 || !IsWoodTile(position))
                 return false;
@@ -407,7 +426,7 @@ namespace StellaStair.Grid
                 woodHealth.Remove(cell);
                 woodTilemap.SetTile(cell, null);
                 if (supportedUnit != null && supportedUnit.IsAlive)
-                    supportedUnit.TryFallAfterSupportDestroyed();
+                    supportedUnit.TryFallAfterSupportDestroyed(source);
                 OccupancyChanged?.Invoke();
                 return true;
             }
@@ -437,11 +456,11 @@ namespace StellaStair.Grid
             StartCoroutine(ExplosionVisualRoutine(center));
             foreach (var target in targets)
                 if (target != null && target.IsAlive)
-                    target.TakeDamage(damage);
+                    target.TakeDamage(damage, source);
 
             for (var x = center.X - 1; x <= center.X + 1; x++)
                 for (var y = center.Y - 1; y <= center.Y + 1; y++)
-                    DamageWood(new GridPosition(x, y), damage);
+                    DamageWood(new GridPosition(x, y), damage, source);
         }
 
         private IEnumerator ExplosionVisualRoutine(GridPosition center)
@@ -500,19 +519,68 @@ namespace StellaStair.Grid
                     woodHealth[cell] = WoodMaxHealth;
         }
 
-        public bool IsPlayerDeploymentCell(GridPosition position) =>
-            playerDeploymentTilemap != null && playerDeploymentTilemap.HasTile(position.ToVector3Int());
+        public bool IsPlayerDeploymentCell(GridPosition position)
+        {
+            if (HasExplicitPlayerDeploymentCells())
+                return playerDeploymentTilemap.HasTile(position.ToVector3Int());
+            return IsFallbackPlayerDeploymentCell(position);
+        }
 
         public IEnumerable<GridPosition> GetPlayerDeploymentCells()
         {
-            if (playerDeploymentTilemap == null)
+            if (!HasExplicitPlayerDeploymentCells())
+            {
+                foreach (var cell in GetFallbackPlayerDeploymentCells())
+                    yield return cell;
                 yield break;
+            }
 
             foreach (var cell in playerDeploymentTilemap.cellBounds.allPositionsWithin)
             {
                 if (playerDeploymentTilemap.HasTile(cell))
                     yield return GridPosition.From(cell);
             }
+        }
+
+        private IEnumerable<GridPosition> GetFallbackPlayerDeploymentCells()
+        {
+            if (walkableTilemap == null)
+                yield break;
+
+            var yielded = 0;
+            for (var x = walkableTilemap.cellBounds.xMin; x < walkableTilemap.cellBounds.xMax && yielded < 5; x++)
+            {
+                for (var y = walkableTilemap.cellBounds.yMin; y < walkableTilemap.cellBounds.yMax && yielded < 5; y++)
+                {
+                    var position = new GridPosition(x, y);
+                    if (!walkableTilemap.HasTile(position.ToVector3Int()) || !CanEnter(position))
+                        continue;
+                    yielded++;
+                    yield return position;
+                }
+            }
+        }
+
+        private bool IsFallbackPlayerDeploymentCell(GridPosition position)
+        {
+            if (HasExplicitPlayerDeploymentCells() || walkableTilemap == null)
+                return false;
+            foreach (var cell in GetFallbackPlayerDeploymentCells())
+                if (cell == position)
+                    return true;
+            return false;
+        }
+
+        private bool HasExplicitPlayerDeploymentCells()
+        {
+            if (playerDeploymentTilemap == null)
+                return false;
+
+            foreach (var cell in playerDeploymentTilemap.cellBounds.allPositionsWithin)
+                if (playerDeploymentTilemap.HasTile(cell))
+                    return true;
+
+            return false;
         }
 
         public IEnumerable<GridPosition> GetCellsInAttackRange(
@@ -609,7 +677,8 @@ namespace StellaStair.Grid
         }
 
         public IEnumerable<GridPosition> GetNeighbors(
-            GridPosition position, TacticalUnit mover = null, bool allowOccupiedTraversal = false)
+            GridPosition position, TacticalUnit mover = null, bool allowOccupiedTraversal = false,
+            bool allowLadders = true)
         {
             foreach (var direction in HorizontalDirections)
             {
@@ -618,14 +687,14 @@ namespace StellaStair.Grid
                 // A ladder is a traversal-only floor during path searches.
                 // CanEnter still rejects it, so a unit cannot stop on it.
                 var ladderTraversal = new GridPosition(targetX, position.Y);
-                if (allowOccupiedTraversal && IsLadderTraversalCell(ladderTraversal))
+                if (allowLadders && allowOccupiedTraversal && IsLadderTraversalCell(ladderTraversal))
                 {
                     yield return ladderTraversal;
                     continue;
                 }
 
-                // 가장 높은 유효 표면을 먼저 선택한다.
-                // 같은 x에서 수직으로 올라가는 경로를 만들지 않아 단차 타일을 관통하지 않는다.
+                // 가???��? ?�효 ?�면??먼�? ?�택?�다.
+                // 같�? x?�서 ?�직?�로 ?�라가??경로�?만들지 ?�아 ?�차 ?�?�을 관?�하지 ?�는??
                 for (var y = position.Y + maximumStepUp; y >= position.Y - maximumDrop; y--)
                 {
                     var candidate = new GridPosition(targetX, y);
@@ -638,8 +707,9 @@ namespace StellaStair.Grid
                 }
             }
 
-            foreach (var ladderDestination in GetLadderDestinations(position, mover, allowOccupiedTraversal))
-                yield return ladderDestination;
+            if (allowLadders)
+                foreach (var ladderDestination in GetLadderDestinations(position, mover, allowOccupiedTraversal))
+                    yield return ladderDestination;
         }
 
         private bool IsLadderTraversalCell(GridPosition position)
@@ -703,7 +773,7 @@ namespace StellaStair.Grid
 
             foreach (var ladderCell in connectedLadders)
             {
-                // 사다리는 바로 아래 바닥 또는 좌우에 닿은 표면으로 출입할 수 있다.
+                // ?�다리는 바로 ?�래 바닥 ?�는 좌우???��? ?�면?�로 출입?????�다.
                 for (var xOffset = -1; xOffset <= 1; xOffset++)
                 {
                     for (var yOffset = -1; yOffset <= 0; yOffset++)
@@ -715,9 +785,9 @@ namespace StellaStair.Grid
                         if (destination == position)
                             continue;
 
-                        // 핵심 수정:
-                        // 같은 높이의 옆칸 이동은 일반 이동으로 처리한다.
-                        // 이 조건이 없으면 사다리 1블럭 전/옆에서도 사다리 이동 애니메이션이 시작될 수 있다.
+                        // ?�심 ?�정:
+                        // 같�? ?�이???�칸 ?�동?� ?�반 ?�동?�로 처리?�다.
+                        // ??조건???�으�??�다�?1블럭 ???�에?�도 ?�다�??�동 ?�니메이?�이 ?�작?????�다.
                         if (destination.Y == position.Y)
                             continue;
 
@@ -727,8 +797,8 @@ namespace StellaStair.Grid
                         if (!IsSurface(destination))
                             continue;
 
-                        // 실제 경로 탐색에서는 사다리 입구/출구가 비어 있어야 한다.
-                        // IsLadderConnection처럼 판정만 할 때는 allowOccupiedTraversal=true로 통과 가능.
+                        // ?�제 경로 ?�색?�서???�다�??�구/출구가 비어 ?�어???�다.
+                        // IsLadderConnection처럼 ?�정�????�는 allowOccupiedTraversal=true�??�과 가??
                         if (allowOccupiedTraversal || CanEnter(destination, mover))
                             yield return destination;
                     }
@@ -741,8 +811,8 @@ namespace StellaStair.Grid
             if (ladderTilemap == null)
                 return false;
 
-            // 핵심 수정:
-            // 높이가 변하지 않는 이동은 사다리 연결이 아니다.
+            // ?�심 ?�정:
+            // ?�이가 변?��? ?�는 ?�동?� ?�다�??�결???�니??
             if (from.Y == to.Y)
                 return false;
 
@@ -762,7 +832,7 @@ namespace StellaStair.Grid
             if (ladderTilemap == null)
                 return false;
 
-            // 같은 높이 이동은 사다리 이동이 아니므로 ladder X가 필요 없다.
+            // 같�? ?�이 ?�동?� ?�다�??�동???�니므�?ladder X가 ?�요 ?�다.
             if (from.Y == to.Y)
                 return false;
 
@@ -788,9 +858,9 @@ namespace StellaStair.Grid
                         if (!IsSurfaceTouchingLadderCell(to, ladderCell))
                             continue;
 
-                        // from에서 가까운 사다리 진입칸,
-                        // to와 이어지는 사다리칸,
-                        // 그리고 같은 세로 사다리 컬럼을 우선한다.
+                        // from?�서 가까운 ?�다�?진입�?
+                        // to?� ?�어지???�다리칸,
+                        // 그리�?같�? ?�로 ?�다�?컬럼???�선?�다.
                         var score =
                             Mathf.Abs(entry.x - from.X) +
                             Mathf.Abs(entry.y - from.Y) +
@@ -887,7 +957,7 @@ namespace StellaStair.Grid
             fallDistance = 0;
             landing = default;
 
-            // 일반 이동과 달리 넉백은 큰 낙하도 허용한다.
+            // ?�반 ?�동�??�리 ?�백?� ???�하???�용?�다.
             for (var y = position.Y + maximumStepUp; y >= walkableTilemap.cellBounds.yMin; y--)
             {
                 var candidate = new GridPosition(targetX, y);
@@ -908,7 +978,7 @@ namespace StellaStair.Grid
                 return KnockbackLandingType.Landing;
             }
 
-            // 해당 열에 지형은 있는데 도달 가능한 표면이 없으면 벽으로 본다.
+            // ?�당 ?�에 지?��? ?�는???�달 가?�한 ?�면???�으�?벽으�?본다.
             if (HasTerrainInColumn(walkableTilemap, targetX) ||
                 HasTerrainInColumn(woodTilemap, targetX))
                 return KnockbackLandingType.Collision;
@@ -968,6 +1038,18 @@ namespace StellaStair.Grid
         public bool TryOccupy(TacticalUnit unit, GridPosition destination)
         {
             if (unit == null || !CanEnter(destination, unit))
+                return false;
+
+            RemoveOccupancy(unit);
+            occupants[destination] = unit;
+            OccupancyChanged?.Invoke();
+
+            return true;
+        }
+
+        public bool TryOccupySpawnedObstacle(TacticalUnit unit, GridPosition destination)
+        {
+            if (unit == null || occupants.TryGetValue(destination, out var occupant) && occupant != unit)
                 return false;
 
             RemoveOccupancy(unit);

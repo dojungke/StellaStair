@@ -133,7 +133,15 @@ MonoBehaviour:
   - position: {x: 3, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
     color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
+  mapName: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
+  mapDescription: "test2\n\uBCF4\uC0C1: \uBCC4\n-\uBCC4\uC0AC\uB2E4\uB9AC"
   uiElements: []
   rounds: []
-  stageType: 1
+  stageType: 0
+  attackObjectiveMaxHealth: 8
+  defenseObjectiveMaxHealth: 12
+  attackObjectiveSprite: {fileID: 0}
+  defenseObjectiveSprite: {fileID: 0}
   defenseTurnsToSurvive: 5
+  escortTurnsToSurvive: 5
+  escortUnitProgressKey: 

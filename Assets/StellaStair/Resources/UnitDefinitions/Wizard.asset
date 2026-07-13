@@ -25,6 +25,67 @@ MonoBehaviour:
   <CanPierceUnits>k__BackingField: 1
   <AreaKnockbackRadius>k__BackingField: 1
   <AreaKnockbackDistance>k__BackingField: 1
+  attackTargetOffsets:
+  - x: -4
+    y: 1
+  - x: -3
+    y: 1
+  - x: -2
+    y: 1
+  - x: -1
+    y: 1
+  - x: 0
+    y: 1
+  - x: 1
+    y: 1
+  - x: 2
+    y: 1
+  - x: 3
+    y: 1
+  - x: 4
+    y: 1
+  - x: -4
+    y: 0
+  - x: -3
+    y: 0
+  - x: -2
+    y: 0
+  - x: -1
+    y: 0
+  - x: 1
+    y: 0
+  - x: 2
+    y: 0
+  - x: 3
+    y: 0
+  - x: 4
+    y: 0
+  - x: -4
+    y: -1
+  - x: -3
+    y: -1
+  - x: -2
+    y: -1
+  - x: -1
+    y: -1
+  - x: 0
+    y: -1
+  - x: 1
+    y: -1
+  - x: 2
+    y: -1
+  - x: 3
+    y: -1
+  - x: 4
+    y: -1
+  attackEffectOffsets:
+  - x: -1
+    y: 0
+  - x: 0
+    y: 0
+  - x: 1
+    y: 0
+  attackModeRanges: []
   <UnitSprite>k__BackingField: {fileID: 7819148489596024459, guid: 49d1ea27fcf234e4d9851d269d352b0b, type: 3}
   <AnimationPrefab>k__BackingField: {fileID: 0}
   <AnimationController>k__BackingField: {fileID: 0}

@@ -14,6 +14,7 @@ namespace StellaStair.Units
         [SerializeField] private Color woundedColor = new(1f, 0.72f, 0.1f, 1f);
         [SerializeField] private Color criticalColor = new(0.95f, 0.15f, 0.12f, 1f);
         [SerializeField] private Color previewDamageColor = new(1f, 0.12f, 0.08f, 0.95f);
+        [SerializeField] private Color previewHealColor = new(0.25f, 0.95f, 0.55f, 0.95f);
         [SerializeField] private int sortingOrder = 40;
 
         private static Sprite sharedSprite;
@@ -23,7 +24,7 @@ namespace StellaStair.Units
         private SpriteRenderer fillRenderer;
         private SpriteRenderer previewDamageRenderer;
         private float ratio = 1f;
-        private int previewDamage;
+        private int previewAmount;
 
         private void Awake()
         {
@@ -105,7 +106,7 @@ namespace StellaStair.Units
 
         public void SetPreviewDamage(int damage)
         {
-            previewDamage = Mathf.Max(0, damage);
+            previewAmount = damage;
             ApplyVisual();
         }
 
@@ -124,12 +125,25 @@ namespace StellaStair.Units
 
             if (previewDamageRenderer == null) return;
             var maximum = Mathf.Max(1, unit.MaxHealth);
-            var damageRatio = Mathf.Min(previewDamage, unit.CurrentHealth) / (float)maximum;
-            var predictedRatio = Mathf.Max(0f, ratio - damageRatio);
-            previewDamageRenderer.enabled = damageRatio > 0f;
-            previewDamageRenderer.transform.localScale = new Vector3(width * damageRatio, height, 1f);
+            if (previewAmount > 0)
+            {
+                var damageRatio = Mathf.Min(previewAmount, unit.CurrentHealth) / (float)maximum;
+                var predictedRatio = Mathf.Max(0f, ratio - damageRatio);
+                previewDamageRenderer.color = previewDamageColor;
+                previewDamageRenderer.enabled = damageRatio > 0f;
+                previewDamageRenderer.transform.localScale = new Vector3(width * damageRatio, height, 1f);
+                previewDamageRenderer.transform.localPosition = new Vector3(
+                    -width * 0.5f + width * (predictedRatio + damageRatio * 0.5f), 0f, 0f);
+                return;
+            }
+
+            var healRatio = Mathf.Min(-previewAmount, unit.MaxHealth - unit.CurrentHealth) / (float)maximum;
+            var healedRatio = Mathf.Min(1f, ratio + healRatio);
+            previewDamageRenderer.color = previewHealColor;
+            previewDamageRenderer.enabled = healRatio > 0f;
+            previewDamageRenderer.transform.localScale = new Vector3(width * healRatio, height, 1f);
             previewDamageRenderer.transform.localPosition = new Vector3(
-                -width * 0.5f + width * (predictedRatio + damageRatio * 0.5f), 0f, 0f);
+                -width * 0.5f + width * (ratio + (healedRatio - ratio) * 0.5f), 0f, 0f);
         }
 
         private void OnDied(TacticalUnit deadUnit)

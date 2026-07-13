@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using StellaStair.Grid;
+using StellaStair.Units;
 using UnityEngine;
 
 namespace StellaStair.Presentation
@@ -16,6 +17,18 @@ namespace StellaStair.Presentation
         [SerializeField] private int sortingOrder = 10;
         private readonly List<GameObject> markers = new();
         private Sprite markerSprite;
+
+        public void ShowFloor(TacticalBoard board, IEnumerable<GridPosition> positions, GridPosition? selected = null)
+        {
+            Clear();
+            EnsureSprite();
+            foreach (var position in positions)
+            {
+                if (selected.HasValue && position == selected.Value)
+                    continue;
+                CreateMarkerAtWorld(board.PositionToStandingWorld(position), board, position, reachableColor, 0.92f);
+            }
+        }
 
         public void Show(TacticalBoard board, IEnumerable<GridPosition> positions, GridPosition? selected = null)
         {
@@ -42,7 +55,9 @@ namespace StellaStair.Presentation
             IEnumerable<GridPosition> collisionPositions, IEnumerable<GridPosition> voidPositions,
             bool targetTerrain = false, int terrainPreviewDamage = 0,
             IEnumerable<GridPosition> reachablePositions = null,
-            IEnumerable<GridPosition> attackablePositions = null)
+            IEnumerable<GridPosition> attackablePositions = null,
+            IReadOnlyDictionary<TacticalUnit, GridPosition> knockbackGhostDestinations = null,
+            IEnumerable<GridPosition> effectPositions = null)
         {
             Clear();
             EnsureSprite();
@@ -57,6 +72,12 @@ namespace StellaStair.Presentation
                         continue;
                     CreateMarker(board, position, fadedReachableColor);
                 }
+            }
+
+            if (effectPositions != null)
+            {
+                foreach (var position in effectPositions)
+                    CreateMarker(board, position, impactColor, 0.58f);
             }
 
             if (attackablePositions != null)
@@ -80,8 +101,20 @@ namespace StellaStair.Presentation
             else
                 CreateMarker(board, impact, impactColor, 0.72f);
 
+            var ghostedKnockbackPositions = new HashSet<GridPosition>();
+            if (knockbackGhostDestinations != null)
+            {
+                foreach (var pair in knockbackGhostDestinations)
+                {
+                    if (TryCreateMovePreviewGhost(board, pair.Value, pair.Key))
+                        ghostedKnockbackPositions.Add(pair.Value);
+                }
+            }
             foreach (var position in knockbackDestinations)
-                CreateMarker(board, position, knockbackColor, 0.68f);
+            {
+                if (!ghostedKnockbackPositions.Contains(position))
+                    CreateMarker(board, position, knockbackColor, 0.68f);
+            }
             foreach (var position in collisionPositions)
                 CreateCrossMarker(board, position, collisionColor);
             foreach (var position in voidPositions)
@@ -89,7 +122,7 @@ namespace StellaStair.Presentation
         }
 
         public void ShowMovePreview(TacticalBoard board, IEnumerable<GridPosition> reachablePositions,
-            GridPosition selected, GridPosition destination)
+            GridPosition selected, GridPosition destination, TacticalUnit previewUnit = null)
         {
             Clear();
             EnsureSprite();
@@ -101,7 +134,8 @@ namespace StellaStair.Presentation
                     continue;
                 CreateMarker(board, position, fadedReachableColor);
             }
-            CreateMarker(board, destination, knockbackColor);
+            if (!TryCreateMovePreviewGhost(board, destination, previewUnit))
+                CreateMarker(board, destination, knockbackColor);
         }
 
         public void ShowWoodHealth(TacticalBoard board, GridPosition position)
@@ -175,7 +209,9 @@ namespace StellaStair.Presentation
             IEnumerable<GridPosition> attackablePositions,
             IEnumerable<GridPosition> knockbackDestinations,
             IEnumerable<GridPosition> collisionPositions,
-            IEnumerable<GridPosition> voidPositions)
+            IEnumerable<GridPosition> voidPositions,
+            TacticalUnit previewUnit = null,
+            IReadOnlyDictionary<TacticalUnit, GridPosition> knockbackGhostDestinations = null)
         {
             Clear();
             EnsureSprite();
@@ -193,13 +229,24 @@ namespace StellaStair.Presentation
             foreach (var position in attackablePositions)
                 CreateMarker(board, position, fadedAttackColor);
 
-            CreateMarker(board, selected, selectedColor, 0.72f);
-            if (willMove)
+            if (willMove && !TryCreateMovePreviewGhost(board, moveDestination, previewUnit))
                 CreateMarker(board, moveDestination, knockbackColor, 0.82f);
             if (willAttack)
                 CreateMarker(board, attackTarget, impactColor, 0.72f);
+            var ghostedKnockbackPositions = new HashSet<GridPosition>();
+            if (knockbackGhostDestinations != null)
+            {
+                foreach (var pair in knockbackGhostDestinations)
+                {
+                    if (TryCreateMovePreviewGhost(board, pair.Value, pair.Key))
+                        ghostedKnockbackPositions.Add(pair.Value);
+                }
+            }
             foreach (var position in knockbackDestinations)
-                CreateMarker(board, position, knockbackColor, 0.68f);
+            {
+                if (!ghostedKnockbackPositions.Contains(position))
+                    CreateMarker(board, position, knockbackColor, 0.68f);
+            }
             foreach (var position in collisionPositions)
                 CreateCrossMarker(board, position, collisionColor);
             foreach (var position in voidPositions)
@@ -226,24 +273,23 @@ namespace StellaStair.Presentation
                 GetMarkerWorldPosition(board, position), board, position, color, scale);
         }
 
-        private void CreateMovePreviewGhost(TacticalBoard board, GridPosition destination, TacticalUnit unit)
+        private bool TryCreateMovePreviewGhost(TacticalBoard board, GridPosition destination, TacticalUnit unit)
         {
             if (unit == null)
             {
-                CreateMarker(board, destination, knockbackColor);
-                return;
+                return false;
             }
 
             var ghost = unit.CreateMovePreviewGhost(0.45f, sortingOrder + 30);
             if (ghost == null)
             {
-                CreateMarker(board, destination, knockbackColor);
-                return;
+                return false;
             }
 
             ghost.transform.SetParent(transform);
             ghost.transform.position = unit.GetPreviewStandingWorldPosition(destination);
             markers.Add(ghost);
+            return true;
         }
 
         private void CreateMarkerAtWorld(
@@ -292,4 +338,3 @@ namespace StellaStair.Presentation
         }
     }
 }
-

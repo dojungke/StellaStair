@@ -1,0 +1,225 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b68690c5993d99d45918fc2a8b567e4f, type: 3}
+  m_Name: TacticalDialogueDatabase
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Presentation.TacticalDialogueDatabase
+  characters:
+  - characterId: "\uB9C8\uBC95\uC0AC"
+    normalSprite: {fileID: 7819148489596024459, guid: 49d1ea27fcf234e4d9851d269d352b0b, type: 3}
+  - characterId: "\uC774\uB9AC"
+    normalSprite: {fileID: -5565481537080689747, guid: 171c9e0e8de2dc249aec64b9e90c4163, type: 3}
+  - characterId: "\uAE30\uC0AC"
+    normalSprite: {fileID: -7057413313501814570, guid: f0dc09ba5968c5045a7d8e8caa50bf6c, type: 3}
+  lines:
+  - stageKey: '*'
+    timing: 0
+    order: 1
+    speakerName: "\uC774\uB9AC"
+    skillKey: 
+    text: After victory dialogue sample.
+    leftCharacterId: "\uC774\uB9AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 2
+    order: 1
+    speakerName: Guide
+    skillKey: 
+    text: After defeat dialogue sample.
+    leftCharacterId: Hero
+    leftPortrait: 2
+    rightCharacterId: Enemy
+    rightPortrait: 1
+  - stageKey: '*'
+    timing: 3
+    order: 1
+    speakerName: Wizard
+    skillKey: 
+    text: "\uB514\uBC84\uADF8"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 3
+    order: 2
+    speakerName: Knight
+    skillKey: 
+    text: "\uCEF7"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 3
+    order: 3
+    speakerName: Wizard
+    skillKey: Fireball
+    text: "\uB728\uAC70\uC6B8\uAC70\uB2E4! \uC880 \uB9CE\uC774!"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 3
+    order: 4
+    speakerName: Wizard
+    skillKey: IceSpike
+    text: "\uBA38\uB9AC\uC880 \uC2DD\uD600"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 4
+    order: 1
+    speakerName: Wizard
+    skillKey: 
+    text: "\uAC15\uD654!"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 4
+    order: 2
+    speakerName: Knight
+    skillKey: 
+    text: "\uBA85\uC608"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 5
+    order: 1
+    speakerName: Wizard
+    skillKey: 
+    text: "\u3147"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 5
+    order: 2
+    speakerName: Knight
+    skillKey: 
+    text: "\uC120\uBB3C"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 6
+    order: 1
+    speakerName: Wizard
+    skillKey: Fireball
+    text: "\uBD88!"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 6
+    order: 2
+    speakerName: Wizard
+    skillKey: IceSpike
+    text: "\uC5BC\uC74C!"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: '*'
+    timing: 6
+    order: 3
+    speakerName: Wizard
+    skillKey: NatureFragrance
+    text: "\uC790\uC5F0\uC2A4\uB7EC\uC6E0\uC5B4"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
+    timing: 0
+    order: 3
+    speakerName: "\uC774\uB9AC"
+    skillKey: 
+    text: 2234
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    rightCharacterId: "\uC774\uB9AC"
+    rightPortrait: 1
+  - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
+    timing: 0
+    order: 4
+    speakerName: "\uC774\uB9AC"
+    skillKey: 
+    text: "\uC5EC\uB7EC \uC904 \uB300\uC0AC\uB294 \uC774\uB807\uAC8C \uAC19\uC740
+      StageKey\uC640 Timing\uC5D0 \uD589\uC744 \uCD94\uAC00\uD558\uBA74 \uB429\uB2C8\uB2E4.213"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    rightCharacterId: "\uC774\uB9AC"
+    rightPortrait: 1
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 0
+    order: 1
+    speakerName: "\uAE30\uC0AC"
+    skillKey: 
+    text: "\uAC70\uC758 \uB2E4 \uC628\uAC83 \uAC19\uB124"
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 0
+    order: 2
+    speakerName: "\uAE30\uC0AC"
+    skillKey: 
+    text: "\uBAA8\uD5D8\uAC00 \uB4F1\uB85D\uC744 \uD558\uB824\uBA74 \uC57D\uCD08\uB97C
+      \uAC00\uC838\uAC00\uC57C \uD55C\uB2E4\uACE0 \uD588\uC9C0"
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 1
+    order: 1
+    speakerName: "\uAE30\uC0AC"
+    skillKey: 
+    text: "\uB2E4 \uBAA8\uC558\uB124 \uADF8\uB7FC \uB9C8\uC744\uB85C \uAC00\uC790"
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: 
+    rightPortrait: 0
+  - stageKey: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
+    timing: 0
+    order: 1
+    speakerName: "\uB9C8\uBC95\uC0AC"
+    skillKey: 
+    text: Before battle dialogue sample.
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    rightCharacterId: "\uC774\uB9AC"
+    rightPortrait: 2
+  - stageKey: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
+    timing: 0
+    order: 2
+    speakerName: "\uC774\uB9AC"
+    skillKey: 
+    text: "\uC5EC\uB7EC \uC904 \uB300\uC0AC\uB294 \uC774\uB807\uAC8C \uAC19\uC740
+      StageKey\uC640 Timing\uC5D0 \uD589\uC744 \uCD94\uAC00\uD558\uBA74 \uB429\uB2C8\uB2E4."
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    rightCharacterId: "\uC774\uB9AC"
+    rightPortrait: 1

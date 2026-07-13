@@ -23,22 +23,65 @@ namespace StellaStair.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Tactical Map Library", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "현재 씬의 전술 맵 배치를 Map Data로 저장하거나 불러옵니다.",
+                "?꾩옱 ?ъ쓽 ?꾩닠 留?諛곗튂瑜?Map Data濡???ν븯嫄곕굹 遺덈윭?듬땲??",
                 MessageType.Info);
             selectedMap = (TacticalMapData)EditorGUILayout.ObjectField(
                 "Selected Map", selectedMap, typeof(TacticalMapData), false);
             if (selectedMap != null)
             {
                 EditorGUI.BeginChangeCheck();
+                var mapName = EditorGUILayout.TextField("Map Name", selectedMap.DisplayName);
+                EditorGUILayout.LabelField("Map Description");
+                var mapDescription = EditorGUILayout.TextArea(
+                    selectedMap.mapDescription ?? string.Empty, GUILayout.MinHeight(48f));
                 var stageType = (TacticalStageType)EditorGUILayout.EnumPopup(
                     "Stage Type", selectedMap.stageType);
-                var defenseTurns = EditorGUILayout.IntField(
-                    "Defense Turns", selectedMap.defenseTurnsToSurvive);
+                var attackObjectiveHealth = selectedMap.AttackObjectiveMaxHealth;
+                var defenseObjectiveHealth = selectedMap.DefenseObjectiveMaxHealth;
+                var attackObjectiveSprite = selectedMap.attackObjectiveSprite;
+                var defenseObjectiveSprite = selectedMap.defenseObjectiveSprite;
+                var defenseTurns = selectedMap.defenseTurnsToSurvive;
+                var escortTurns = selectedMap.escortTurnsToSurvive;
+                var escortKey = selectedMap.escortUnitProgressKey;
+
+                if (stageType == TacticalStageType.Attack)
+                {
+                    attackObjectiveHealth = EditorGUILayout.IntField(
+                        "Attack Objective HP", attackObjectiveHealth);
+                    attackObjectiveSprite = (Sprite)EditorGUILayout.ObjectField(
+                        "Attack Objective Image", attackObjectiveSprite, typeof(Sprite), false);
+                }
+
+                if (stageType == TacticalStageType.Defense)
+                {
+                    defenseObjectiveHealth = EditorGUILayout.IntField(
+                        "Defense Objective HP", defenseObjectiveHealth);
+                    defenseObjectiveSprite = (Sprite)EditorGUILayout.ObjectField(
+                        "Defense Objective Image", defenseObjectiveSprite, typeof(Sprite), false);
+                    defenseTurns = EditorGUILayout.IntField(
+                        "Defense Turns", defenseTurns);
+                }
+
+                if (stageType == TacticalStageType.Escort)
+                {
+                    escortTurns = EditorGUILayout.IntField(
+                        "Escort Turns", escortTurns);
+                    escortKey = EditorGUILayout.TextField(
+                        "Escort Unit Key", escortKey);
+                }
                 if (EditorGUI.EndChangeCheck())
                 {
-                    Undo.RecordObject(selectedMap, "Change Stage Type");
+                    Undo.RecordObject(selectedMap, "Change Map Settings");
+                    selectedMap.mapName = mapName?.Trim() ?? string.Empty;
+                    selectedMap.mapDescription = mapDescription ?? string.Empty;
                     selectedMap.stageType = stageType;
+                    selectedMap.attackObjectiveMaxHealth = Mathf.Max(1, attackObjectiveHealth);
+                    selectedMap.defenseObjectiveMaxHealth = Mathf.Max(1, defenseObjectiveHealth);
+                    selectedMap.attackObjectiveSprite = attackObjectiveSprite;
+                    selectedMap.defenseObjectiveSprite = defenseObjectiveSprite;
                     selectedMap.defenseTurnsToSurvive = Mathf.Max(1, defenseTurns);
+                    selectedMap.escortTurnsToSurvive = Mathf.Max(1, escortTurns);
+                    selectedMap.escortUnitProgressKey = escortKey ?? string.Empty;
                     SaveSelectedMapAsset();
                 }
 
@@ -309,10 +352,11 @@ namespace StellaStair.Editor
             EnsureMapsFolder();
             var path = EditorUtility.SaveFilePanelInProject(
                 "Save Tactical Map", "NewTacticalMap", "asset",
-                "저장할 맵 이름을 입력하세요.", "Assets/StellaStair/Maps");
+                "??ν븷 留??대쫫???낅젰?섏꽭??", "Assets/StellaStair/Maps");
             if (string.IsNullOrEmpty(path))
                 return;
             var map = CreateInstance<TacticalMapData>();
+            map.mapName = System.IO.Path.GetFileNameWithoutExtension(path);
             AssetDatabase.CreateAsset(map, path);
             selectedMap = map;
             SaveTo(map);
@@ -329,7 +373,7 @@ namespace StellaStair.Editor
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null)
-                EditorUtility.DisplayDialog("Map Library", "현재 씬에 TacticalBoard가 없습니다.", "OK");
+                EditorUtility.DisplayDialog("Map Library", "?꾩옱 ?ъ뿉 TacticalBoard媛 ?놁뒿?덈떎.", "OK");
             return board;
         }
 
@@ -385,7 +429,7 @@ namespace StellaStair.Editor
                 return;
             if (!EditorUtility.DisplayDialog(
                     "Load Tactical Round",
-                    "현재 씬의 배치를 선택한 라운드 맵으로 교체할까요?",
+                    "?꾩옱 ?ъ쓽 諛곗튂瑜??좏깮???쇱슫??留듭쑝濡?援먯껜?좉퉴??",
                     "Load", "Cancel"))
                 return;
 
@@ -425,7 +469,7 @@ namespace StellaStair.Editor
                 return;
             if (!EditorUtility.DisplayDialog(
                     "Load Tactical Map",
-                    "현재 씬의 배치를 선택한 맵으로 교체할까요?",
+                    "?꾩옱 ?ъ쓽 諛곗튂瑜??좏깮??留듭쑝濡?援먯껜?좉퉴??",
                     "Load", "Cancel"))
                 return;
 

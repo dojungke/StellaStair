@@ -59,11 +59,15 @@ namespace StellaStair.Presentation
 
         public void ApplyToCurrentScene()
         {
+            var sceneLevelUpOverlays = GetSceneLevelUpUpgradeOverlays();
+            var keepSceneLevelUpUi = sceneLevelUpOverlays.Count > 0;
             var byPath = BuildElementLookup();
             var hasSavedUi = false;
             foreach (var saved in elements)
             {
-                if (saved != null && TryFindElement(byPath, saved.hierarchyPath, out _))
+                if (saved != null &&
+                    (!keepSceneLevelUpUi || !IsLevelUpUpgradeUiPath(saved.hierarchyPath)) &&
+                    TryFindElement(byPath, saved.hierarchyPath, out _))
                 {
                     hasSavedUi = true;
                     break;
@@ -73,12 +77,15 @@ namespace StellaStair.Presentation
             if (!hasSavedUi && runtimeUiPrefab != null)
             {
                 UnityEngine.Object.Instantiate(runtimeUiPrefab).name = runtimeUiPrefab.name;
+                if (keepSceneLevelUpUi)
+                    RemoveInstantiatedLevelUpUpgradeUi(sceneLevelUpOverlays);
                 byPath = BuildElementLookup();
             }
 
             foreach (var saved in elements)
             {
                 if (saved == null ||
+                    keepSceneLevelUpUi && IsLevelUpUpgradeUiPath(saved.hierarchyPath) ||
                     !TryFindElement(byPath, saved.hierarchyPath, out var rect))
                     continue;
                 rect.anchorMin = saved.anchorMin;
@@ -92,6 +99,46 @@ namespace StellaStair.Presentation
                     label.text = saved.tmpText;
                 rect.gameObject.SetActive(saved.active);
             }
+        }
+        private static HashSet<GameObject> GetSceneLevelUpUpgradeOverlays()
+        {
+            var overlays = new HashSet<GameObject>();
+            foreach (var rect in FindUiElements())
+            {
+                if (rect != null && rect.name == "Level Up Upgrade Overlay")
+                    overlays.Add(rect.gameObject);
+            }
+            return overlays;
+        }
+
+        private static void RemoveInstantiatedLevelUpUpgradeUi(HashSet<GameObject> sceneOverlays)
+        {
+            foreach (var rect in FindUiElements())
+            {
+                if (rect == null || rect.name != "Level Up Upgrade Overlay" ||
+                    sceneOverlays.Contains(rect.gameObject))
+                    continue;
+                DestroyUiObject(rect.gameObject);
+            }
+        }
+
+        private static void DestroyUiObject(GameObject target)
+        {
+            if (target == null)
+                return;
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(target);
+            else
+                UnityEngine.Object.DestroyImmediate(target);
+        }
+
+        private static bool IsLevelUpUpgradeUiPath(string path)
+        {
+            return !string.IsNullOrEmpty(path) &&
+                (path.EndsWith("Level Up Upgrade Overlay", StringComparison.Ordinal) ||
+                 path.Contains("Level Up Upgrade Overlay/", StringComparison.Ordinal) ||
+                 path.EndsWith("Level Up Upgrade Panel", StringComparison.Ordinal) ||
+                 path.Contains("Level Up Upgrade Panel/", StringComparison.Ordinal));
         }
 
         private static Dictionary<string, RectTransform> BuildElementLookup()

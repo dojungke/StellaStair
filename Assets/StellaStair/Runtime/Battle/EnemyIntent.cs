@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Units;
 
@@ -11,9 +12,12 @@ namespace StellaStair.Battle
         public GridPosition TargetPosition { get; }
         public bool WillMove { get; }
         public bool WillAttack { get; }
+        public bool AllowLadders { get; }
+        public IReadOnlyDictionary<TacticalUnit, GridPosition> PredictedForcedDestinations { get; }
 
         public EnemyIntent(TacticalUnit enemy, GridPosition attackOrigin, GridPosition moveDestination,
-            GridPosition targetPosition, bool willMove, bool willAttack)
+            GridPosition targetPosition, bool willMove, bool willAttack, bool allowLadders = true,
+            IReadOnlyDictionary<TacticalUnit, GridPosition> predictedForcedDestinations = null)
         {
             Enemy = enemy;
             AttackOrigin = attackOrigin;
@@ -21,6 +25,9 @@ namespace StellaStair.Battle
             TargetPosition = targetPosition;
             WillMove = willMove;
             WillAttack = willAttack;
+            AllowLadders = allowLadders;
+            PredictedForcedDestinations = predictedForcedDestinations ??
+                new Dictionary<TacticalUnit, GridPosition>();
         }
 
         public EnemyIntent ShiftAttackWithEnemy(GridPosition newOrigin)
@@ -29,7 +36,8 @@ namespace StellaStair.Battle
             var deltaY = newOrigin.Y - AttackOrigin.Y;
             var shiftedTarget = new GridPosition(TargetPosition.X + deltaX, TargetPosition.Y + deltaY);
             return new EnemyIntent(
-                Enemy, newOrigin, MoveDestination, shiftedTarget, WillMove, WillAttack);
+                Enemy, newOrigin, MoveDestination, shiftedTarget, WillMove, WillAttack, AllowLadders,
+                PredictedForcedDestinations);
         }
     }
 }

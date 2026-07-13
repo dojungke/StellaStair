@@ -1,0 +1,21 @@
+StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,RightCharacter,RightPortrait,SkillKey
+[이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,이리,Dark,
+[이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,이리,Normal,
+[별] 테스트 2,BeforeBattle,3,이리,2234,마법사,Dark,이리,Normal,
+[별] 테스트 2,BeforeBattle,4,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.213,마법사,Dark,이리,Normal,
+*,BeforeBattle,1,이리,After victory dialogue sample.,이리,Normal,,Empty,
+*,AfterDefeat,1,Guide,After defeat dialogue sample.,Hero,Dark,Enemy,Normal,
+[연습] 약초 채집,BeforeBattle,1,기사,거의 다 온것 같네,기사,Normal,,Empty,
+[연습] 약초 채집,BeforeBattle,2,기사,모험가 등록을 하려면 약초를 가져가야 한다고 했지,기사,Normal,,Empty,
+[연습] 약초 채집,AfterVictory,1,기사,다 모았네 그럼 마을로 가자,기사,Normal,,Empty,
+*,EnemyKilled,1,Wizard,디버그,마법사,Normal,,Empty,
+*,LevelUp,1,Wizard,강화!,마법사,Normal,,Empty,
+*,AllyHealed,1,Wizard,ㅇ,마법사,Normal,,Empty,
+*,EnemyKilled,1,Knight,컷,마법사,Normal,,Empty,
+*,LevelUp,1,Knight,명예,마법사,Normal,,Empty,
+*,AllyHealed,1,Knight,선물,마법사,Normal,,Empty,
+*,SkillUsed,1,Wizard,불!,마법사,Normal,,Empty,Fireball
+*,SkillUsed,1,Wizard,얼음!,마법사,Normal,,Empty,IceSpike
+*,SkillUsed,1,Wizard,자연스러웠어,마법사,Normal,,Empty,NatureFragrance
+*,EnemyKilled,1,Wizard,뜨거울거다! 좀 많이!,마법사,Normal,,Empty,Fireball
+*,EnemyKilled,1,Wizard,머리좀 식혀,마법사,Normal,,Empty,IceSpike

@@ -7,6 +7,7 @@ using StellaStair.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
@@ -17,11 +18,17 @@ namespace StellaStair.Editor
         private const string Root = "Assets/StellaStair/Sample";
         private const string GameDataRoot = "Assets/StellaStair/GameData";
         private const string ObjectDatabasePath = GameDataRoot + "/TacticalObjectDatabase.asset";
+        private const string DefaultBattleUiPath = "Assets/StellaStair/UI/BattleUI.asset";
+        private const string TempUiPrefabPrefix = "Assets/StellaStair/Sample/__TempCurrentSceneUi";
 
         [MenuItem("Stella Stair/Create Tactical Battle Scene")]
         public static void Create()
         {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             EnsureFolder("Assets/StellaStair", "Sample");
+            var capturedUiPrefabPath = CaptureCurrentSceneUiPrefab();
             var objectDatabase = GetOrCreateObjectDatabase();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var sprite = CreateSquareSprite($"{Root}/Square.asset");
@@ -96,27 +103,22 @@ namespace StellaStair.Editor
             var highlighter = new GameObject("Grid Highlights").AddComponent<GridHighlighter>();
             var camera = CreateCamera();
             var input = systems.AddComponent<TacticalInputController>();
+            systems.AddComponent<PlayerPartySpawner>();
 
-            var units = new List<TacticalUnit>
-            {
-                CreateUnit("Player Knight", new Vector3(-6, 3.5f), sprite, new Color(0.25f, 0.65f, 1f)),
-                CreateUnit("Player Archer", new Vector3(-4, 3.5f), sprite, new Color(0.3f, 0.9f, 0.55f))
-            };
-            deployment.Configure(board, units);
+            deployment.Configure(board, new List<TacticalUnit>());
             input.Configure(camera, deployment, highlighter);
-
-            var instructions = new GameObject("Instructions");
-            instructions.AddComponent<SampleInstructions>();
-
+            RestoreCapturedSceneUi(capturedUiPrefabPath);
+            ApplyDefaultBattleUiToCurrentScene();
+            RemoveDuplicateEventSystems();
+            DialogueUiBinder.BindCurrentSceneDialogueUi();
+            ActionButtonBinder.BindCurrentSceneButtons();
             EditorSceneManager.MarkSceneDirty(scene);
-            var path = $"{Root}/TacticalBattle.unity";
+            var path = AssetDatabase.GenerateUniqueAssetPath($"{Root}/TacticalBattle.unity");
             EditorSceneManager.SaveScene(scene, path);
             Selection.activeObject = systems;
             AssetDatabase.SaveAssets();
-            Debug.Log($"?�술 ?�장 ???�성 ?�료: {path}");
+            Debug.Log($"?�술 ?�장 ???�성 ?�료: {path}");
         }
-
-        [MenuItem("Stella Stair/Create Default Object Database")]
         public static void CreateDefaultObjectDatabase()
         {
             var database = GetOrCreateObjectDatabase();
@@ -132,13 +134,29 @@ namespace StellaStair.Editor
             AssetDatabase.SaveAssets();
         }
 
-        [MenuItem("Stella Stair/Add Attack Objective Tilemap To Current Scene")]
+        [MenuItem("Stella Stair/Create Missing Tactical Tilemaps In Current Scene")]
+        public static void CreateMissingTilemapsInCurrentScene()
+        {
+            var board = Object.FindAnyObjectByType<TacticalBoard>();
+            if (board == null || board.Grid == null)
+            {
+                Debug.LogError("Open a scene with a TacticalBoard and Tactical Grid first.");
+                return;
+            }
+
+            AddAttackObjectiveTilemapToCurrentScene();
+            AddDefenseObjectiveTilemapToCurrentScene();
+            AddCrateTilemapToCurrentScene();
+            AddEnemySpawnTilemapsToCurrentScene();
+            Debug.Log("Checked tactical tilemaps and created only missing current-scene tilemaps.");
+        }
+
         public static void AddAttackObjectiveTilemapToCurrentScene()
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null || board.Grid == null)
             {
-                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
+                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
                 return;
             }
 
@@ -158,16 +176,14 @@ namespace StellaStair.Editor
 
             Selection.activeObject = objectiveTile;
             AssetDatabase.SaveAssets();
-            Debug.Log("Attack Objectives ?�?�맵�?AttackObjective ?�?�을 준비했?�니?? 목표???�진?????�는 칸에 배치?�세??");
+            Debug.Log("Attack Objectives ?�?�맵�?AttackObjective ?�?�을 준비했?�니?? 목표???�진?????�는 칸에 배치?�세??");
         }
-
-        [MenuItem("Stella Stair/Add Defense Objective Tilemap To Current Scene")]
         public static void AddDefenseObjectiveTilemapToCurrentScene()
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null || board.Grid == null)
             {
-                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
+                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
                 return;
             }
 
@@ -187,16 +203,14 @@ namespace StellaStair.Editor
 
             Selection.activeObject = objectiveTile;
             AssetDatabase.SaveAssets();
-            Debug.Log("Defense Objectives ?�?�맵�?DefenseObjective ?�?�을 준비했?�니?? 지??목표 ?�치??배치?�세??");
+            Debug.Log("Defense Objectives ?�?�맵�?DefenseObjective ?�?�을 준비했?�니?? 지??목표 ?�치??배치?�세??");
         }
-
-        [MenuItem("Stella Stair/Add Crate Tilemap To Current Scene")]
         public static void AddCrateTilemapToCurrentScene()
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null || board.Grid == null)
             {
-                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
+                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
                 return;
             }
 
@@ -227,16 +241,14 @@ namespace StellaStair.Editor
 
             Selection.objects = new Object[] { crateTile, bombCrateTile };
             AssetDatabase.SaveAssets();
-            Debug.Log("Crates ?�?�맵�?Crate ?�?�을 준비했?�니?? Crate.asset??Tile Palette??추�???배치?�세??");
+            Debug.Log("Crates ?�?�맵�?Crate ?�?�을 준비했?�니?? Crate.asset??Tile Palette??추�???배치?�세??");
         }
-
-        [MenuItem("Stella Stair/Add Enemy Spawn Tilemaps To Current Scene")]
         public static void AddEnemySpawnTilemapsToCurrentScene()
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null || board.Grid == null)
             {
-                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
+                Debug.LogError("TacticalBoard가 ?�는 ?�을 먼�? ?�어 주세??");
                 return;
             }
 
@@ -271,6 +283,96 @@ namespace StellaStair.Editor
             tilemap.gameObject.AddComponent<EnemySpawnTilemap>().Configure(definition, color);
         }
 
+
+
+        private static string CaptureCurrentSceneUiPrefab()
+        {
+            var roots = CollectCurrentSceneUiRoots();
+            if (roots.Count == 0)
+                return string.Empty;
+
+            var container = new GameObject("Captured Scene UI");
+            try
+            {
+                foreach (var root in roots)
+                {
+                    var copy = Object.Instantiate(root, container.transform);
+                    copy.name = root.name;
+                }
+
+                var path = AssetDatabase.GenerateUniqueAssetPath(TempUiPrefabPrefix + ".prefab");
+                PrefabUtility.SaveAsPrefabAsset(container, path);
+                return path;
+            }
+            finally
+            {
+                Object.DestroyImmediate(container);
+            }
+        }
+
+        private static List<GameObject> CollectCurrentSceneUiRoots()
+        {
+            var roots = new List<GameObject>();
+            var seen = new HashSet<GameObject>();
+            foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                AddRoot(canvas != null ? canvas.transform.root.gameObject : null, roots, seen);
+            foreach (var eventSystem in Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                AddRoot(eventSystem != null ? eventSystem.transform.root.gameObject : null, roots, seen);
+            return roots;
+        }
+
+        private static void AddRoot(GameObject root, List<GameObject> roots, HashSet<GameObject> seen)
+        {
+            if (root == null || !root.scene.IsValid() || !seen.Add(root))
+                return;
+            roots.Add(root);
+        }
+
+        private static void RestoreCapturedSceneUi(string prefabPath)
+        {
+            if (string.IsNullOrWhiteSpace(prefabPath))
+                return;
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab != null)
+            {
+                var instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+                if (instance != null)
+                {
+                    instance.name = prefab.name;
+                    PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                    var children = new List<Transform>();
+                    foreach (Transform child in instance.transform)
+                        children.Add(child);
+                    foreach (var child in children)
+                        child.SetParent(null, true);
+                    Object.DestroyImmediate(instance);
+                }
+            }
+
+            AssetDatabase.DeleteAsset(prefabPath);
+        }
+
+        private static void RemoveDuplicateEventSystems()
+        {
+            var systems = Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 1; i < systems.Length; i++)
+            {
+                if (systems[i] != null)
+                    Object.DestroyImmediate(systems[i].gameObject);
+            }
+        }
+        private static void ApplyDefaultBattleUiToCurrentScene()
+        {
+            var battleUi = AssetDatabase.LoadAssetAtPath<BattleUiData>(DefaultBattleUiPath);
+            if (battleUi == null)
+            {
+                Debug.LogWarning($"Default battle UI asset not found: {DefaultBattleUiPath}");
+                return;
+            }
+
+            battleUi.ApplyToCurrentScene();
+        }
         private static Tilemap CreateTilemap(Transform parent, string name, int order)
         {
             var gameObject = new GameObject(name, typeof(Tilemap), typeof(TilemapRenderer));
@@ -333,19 +435,6 @@ namespace StellaStair.Editor
             return camera;
         }
 
-        private static TacticalUnit CreateUnit(string name, Vector3 position, Sprite sprite, Color color)
-        {
-            var gameObject = new GameObject(name, typeof(SpriteRenderer), typeof(BoxCollider2D), typeof(TacticalUnit));
-            gameObject.transform.position = position;
-            gameObject.transform.localScale = Vector3.one;
-            var renderer = gameObject.GetComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.color = color;
-            renderer.sortingOrder = 20;
-            gameObject.GetComponent<BoxCollider2D>().size = Vector2.one;
-            gameObject.GetComponent<TacticalUnit>().Configure(null, UnitTeam.Player);
-            return gameObject.GetComponent<TacticalUnit>();
-        }
 
         private static TacticalObjectDatabase GetOrCreateObjectDatabase()
         {

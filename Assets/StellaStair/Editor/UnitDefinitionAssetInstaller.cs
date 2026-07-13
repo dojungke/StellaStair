@@ -14,8 +14,6 @@ namespace StellaStair.Editor
             EditorApplication.delayCall -= EnsureAssets;
             EditorApplication.delayCall += EnsureAssets;
         }
-
-        [MenuItem("Stella Stair/Ensure Unit Definition Assets")]
         public static void EnsureAssets()
         {
             EnsureFolder("Assets/StellaStair", "Resources");

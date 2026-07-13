@@ -62,16 +62,37 @@ namespace StellaStair.Grid
         public List<Cell> defenseObjectives = new();
         public List<Cell> enemyGuardSpawns = new();
         public List<Cell> enemySoldierSpawns = new();
+        public string mapName = string.Empty;
+        [TextArea(2, 5)] public string mapDescription = string.Empty;
         public List<UiElement> uiElements = new();
         public List<Round> rounds = new();
         public TacticalStageType stageType = TacticalStageType.Elimination;
+        [Min(1)] public int attackObjectiveMaxHealth = 8;
+        [Min(1)] public int defenseObjectiveMaxHealth = 12;
+        public Sprite attackObjectiveSprite;
+        public Sprite defenseObjectiveSprite;
         [Min(1)] public int defenseTurnsToSurvive = 5;
+        [Min(1)] public int escortTurnsToSurvive = 5;
+        public string escortUnitProgressKey = string.Empty;
         private static readonly List<Cell> EmptyCells = new();
+
+        public string DisplayName => string.IsNullOrWhiteSpace(mapName) ? name : mapName.Trim();
+        public int AttackObjectiveMaxHealth => attackObjectiveMaxHealth > 0 ? attackObjectiveMaxHealth : 8;
+        public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth > 0 ? defenseObjectiveMaxHealth : 12;
+
+        private void OnValidate()
+        {
+            attackObjectiveMaxHealth = AttackObjectiveMaxHealth;
+            defenseObjectiveMaxHealth = DefenseObjectiveMaxHealth;
+        }
 
         public void ApplyTo(TacticalBoard board)
         {
             if (board == null)
                 return;
+            board.ConfigureObjectiveSettings(
+                AttackObjectiveMaxHealth, DefenseObjectiveMaxHealth,
+                attackObjectiveSprite, defenseObjectiveSprite);
             Restore(board.WalkableTilemap, walkable);
             Restore(board.PlayerDeploymentTilemap, playerDeployment);
             Restore(board.LadderTilemap, ladders);

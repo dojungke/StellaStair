@@ -20,8 +20,6 @@ namespace StellaStair.Editor
             EditorApplication.delayCall -= EnsureAssets;
             EditorApplication.delayCall += EnsureAssets;
         }
-
-        [MenuItem("Stella Stair/Ensure Knight Animation Controller")]
         public static void EnsureAssets()
         {
             EnsureFolder("Assets/StellaStair", "Animations");

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using StellaStair.Battle;
 using StellaStair.Grid;
 using StellaStair.Presentation;
@@ -7,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace StellaStair.Input
@@ -18,6 +20,7 @@ namespace StellaStair.Input
         [SerializeField] private GridHighlighter highlighter;
         [SerializeField] private LayerMask unitLayerMask = ~0;
         [SerializeField] private Button attackButton;
+        [SerializeField] private Button attackChangeButton;
         [SerializeField] private Button moveUndoButton;
         [SerializeField] private Button turnButton;
 
@@ -25,13 +28,16 @@ namespace StellaStair.Input
         private IReadOnlyDictionary<GridPosition, int> reachable;
         private readonly HashSet<GridPosition> attackablePositions = new();
         private TMP_Text attackButtonLabel;
+        private TMP_Text attackChangeButtonLabel;
         private TMP_Text moveUndoButtonLabel;
         private TMP_Text turnButtonLabel;
         private GridPosition? pendingAttackTarget;
         private bool pendingAttackTargetsWood;
         private readonly HashSet<GridPosition> previewKnockbackDestinations = new();
+        private readonly Dictionary<TacticalUnit, GridPosition> previewKnockbackGhostDestinations = new();
         private readonly HashSet<GridPosition> previewCollisionPositions = new();
         private readonly HashSet<GridPosition> previewVoidPositions = new();
+        private readonly HashSet<GridPosition> previewEffectPositions = new();
         private readonly List<TacticalUnit> previewAffectedUnits = new();
         private readonly Dictionary<TacticalUnit, int> previewDamageByUnit = new();
         private GridPosition? pendingMoveDestination;
@@ -52,41 +58,76 @@ namespace StellaStair.Input
             worldCamera = camera;
             deployment = manager;
             highlighter = gridHighlighter;
-            SubscribeToEnemyIntents();
+            ResolveRuntimeReferences();
+            BindSceneButtonsIfMissing();
+            EnsureActionButtonListeners();
+            SubscribeToDeploymentEvents();
+            RefreshActionButtons();
         }
 
         private void Awake()
         {
-            if (worldCamera == null) worldCamera = Camera.main;
-            if (worldCamera != null && worldCamera.GetComponent<TacticalCameraPan>() == null)
-                worldCamera.gameObject.AddComponent<TacticalCameraPan>();
+            ResolveRuntimeReferences();
             BindSceneButtonsIfMissing();
+            EnsureActionButtonListeners();
+            RefreshActionButtons();
+            SubscribeToDeploymentEvents();
+        }
+
+        private void EnsureActionButtonListeners()
+        {
             if (attackButton != null)
             {
+                attackButton.onClick.RemoveListener(HandlePrimaryButton);
                 attackButton.onClick.AddListener(HandlePrimaryButton);
                 attackButtonLabel = attackButton.GetComponentInChildren<TMP_Text>(true);
             }
+            if (attackChangeButton != null)
+            {
+                attackChangeButton.onClick.RemoveListener(HandleAttackChangeButton);
+                attackChangeButton.onClick.AddListener(HandleAttackChangeButton);
+                attackChangeButtonLabel = attackChangeButton.GetComponentInChildren<TMP_Text>(true);
+            }
             if (moveUndoButton != null)
             {
+                moveUndoButton.onClick.RemoveListener(HandleSecondaryButton);
                 moveUndoButton.onClick.AddListener(HandleSecondaryButton);
                 moveUndoButtonLabel = moveUndoButton.GetComponentInChildren<TMP_Text>(true);
             }
             if (turnButton != null)
             {
+                turnButton.onClick.RemoveListener(HandleTurnButton);
                 turnButton.onClick.AddListener(HandleTurnButton);
                 turnButtonLabel = turnButton.GetComponentInChildren<TMP_Text>(true);
             }
-            RefreshActionButtons();
-            SubscribeToEnemyIntents();
+        }
+
+        private void ResolveRuntimeReferences()
+        {
+            if (worldCamera == null)
+                worldCamera = Camera.main;
+            if (worldCamera != null && worldCamera.GetComponent<TacticalCameraPan>() == null)
+                worldCamera.gameObject.AddComponent<TacticalCameraPan>();
+            if (deployment == null)
+                deployment = FindAnyObjectByType<DeploymentManager>();
+            if (highlighter == null)
+                highlighter = FindAnyObjectByType<GridHighlighter>();
         }
 
         private void BindSceneButtonsIfMissing()
         {
-            if (attackButton != null && moveUndoButton != null && turnButton != null)
+            BindNamedSceneButtons();
+            if (attackButton != null && moveUndoButton != null && turnButton != null && attackChangeButton != null)
                 return;
 
-            var buttons = FindObjectsByType<Button>(FindObjectsInactive.Include);
-            if (buttons.Length < 3)
+            var buttons = FindActionButtonCandidates();
+            if (buttons.Count < 3)
+            {
+                EnsureDefaultActionButtons();
+                buttons = FindActionButtonCandidates();
+            }
+
+            if (buttons.Count < 3)
                 return;
 
             Button rightmost = null;
@@ -110,6 +151,139 @@ namespace StellaStair.Input
             attackButton ??= rightmost;
             moveUndoButton ??= secondRightmost;
             turnButton ??= leftmost;
+            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton");
+        }
+
+        private void BindNamedSceneButtons()
+        {
+            attackButton ??= FindSceneButtonByName("Attack Button");
+            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton");
+            moveUndoButton ??= FindSceneButtonByName("Cancel Button", "Move Undo Button", "Move Reset Button");
+            turnButton ??= FindSceneButtonByName("Turn Button");
+        }
+
+        private static Button FindSceneButtonByName(params string[] names)
+        {
+            foreach (var button in FindObjectsByType<Button>(FindObjectsInactive.Include))
+            {
+                if (button == null || IsLevelUpUiButton(button))
+                    continue;
+                foreach (var name in names)
+                    if (button.name == name)
+                        return button;
+            }
+            return null;
+        }
+        private static List<Button> FindActionButtonCandidates()
+        {
+            var result = new List<Button>();
+            foreach (var button in FindObjectsByType<Button>(FindObjectsInactive.Include))
+            {
+                if (button == null || IsLevelUpUiButton(button) || IsAttackChangeButton(button))
+                    continue;
+                result.Add(button);
+            }
+            return result;
+        }
+
+        private static bool IsAttackChangeButton(Button button)
+        {
+            return button != null &&
+                   (button.name == "Attack change Button" ||
+                    button.name == "Attack Change Button" ||
+                    button.name == "AttackChangeButton");
+        }
+        private static bool IsLevelUpUiButton(Button button)
+        {
+            var current = button.transform;
+            while (current != null)
+            {
+                if (current.name == "Level Up Upgrade Overlay" ||
+                    current.name == "Level Up Upgrade Panel")
+                    return true;
+                current = current.parent;
+            }
+            return false;
+        }
+
+        public static void EnsureDefaultActionButtons()
+        {
+            if (GameObject.Find("Runtime Action Buttons") != null)
+                return;
+            var canvas = FindAnyObjectByType<Canvas>(FindObjectsInactive.Include);
+            if (canvas == null)
+            {
+                var canvasObject = new GameObject("StellaStair Runtime Battle UI");
+                canvas = canvasObject.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObject.AddComponent<CanvasScaler>();
+                canvasObject.AddComponent<GraphicRaycaster>();
+            }
+            else if (canvas.GetComponent<GraphicRaycaster>() == null)
+            {
+                canvas.gameObject.AddComponent<GraphicRaycaster>();
+            }
+
+            var eventSystem = FindAnyObjectByType<EventSystem>(FindObjectsInactive.Include);
+            if (eventSystem == null)
+            {
+                var eventSystemObject = new GameObject("EventSystem");
+                eventSystem = eventSystemObject.AddComponent<EventSystem>();
+            }
+            if (eventSystem.GetComponent<BaseInputModule>() == null)
+                eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+
+            var root = new GameObject("Runtime Action Buttons", typeof(RectTransform));
+            root.transform.SetParent(canvas.transform, false);
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0f);
+            rootRect.anchorMax = new Vector2(0.5f, 0f);
+            rootRect.pivot = new Vector2(0.5f, 0f);
+            rootRect.anchoredPosition = new Vector2(0f, 24f);
+            rootRect.sizeDelta = new Vector2(760f, 64f);
+
+            CreateRuntimeActionButton(rootRect, "Turn Button", "TURN END", -285f);
+            CreateRuntimeActionButton(rootRect, "Cancel Button", "CANCEL", -95f);
+            CreateRuntimeActionButton(rootRect, "Attack change Button", "ATTACK", 95f);
+            CreateRuntimeActionButton(rootRect, "Attack Button", "ATTACK", 285f);
+        }
+
+        private static Button CreateRuntimeActionButton(
+            RectTransform parent, string name, string labelText, float x)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform));
+            buttonObject.transform.SetParent(parent, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(170f, 54f);
+
+            var image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.08f, 0.1f, 0.14f, 0.92f);
+            var button = buttonObject.AddComponent<Button>();
+            var colors = button.colors;
+            colors.highlightedColor = new Color(0.18f, 0.24f, 0.32f, 0.95f);
+            colors.pressedColor = new Color(0.04f, 0.06f, 0.09f, 1f);
+            colors.disabledColor = new Color(0.08f, 0.08f, 0.08f, 0.35f);
+            button.colors = colors;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+            var label = labelObject.AddComponent<TextMeshProUGUI>();
+            label.font = TMP_Settings.defaultFontAsset;
+            label.text = labelText;
+            label.fontSize = 20f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = Color.white;
+
+            return button;
         }
 
         private static float GetButtonX(Button button)
@@ -120,30 +294,49 @@ namespace StellaStair.Input
         private void OnDestroy()
         {
             if (subscribedDeployment != null)
+            {
                 subscribedDeployment.EnemyIntentsChanged -= OnEnemyIntentsChanged;
+                subscribedDeployment.PhaseChanged -= OnPhaseChanged;
+            }
             if (attackButton != null)
                 attackButton.onClick.RemoveListener(HandlePrimaryButton);
+            if (attackChangeButton != null)
+                attackChangeButton.onClick.RemoveListener(HandleAttackChangeButton);
             if (moveUndoButton != null)
                 moveUndoButton.onClick.RemoveListener(HandleSecondaryButton);
             if (turnButton != null)
                 turnButton.onClick.RemoveListener(HandleTurnButton);
         }
 
-        private void SubscribeToEnemyIntents()
+        private void SubscribeToDeploymentEvents()
         {
             if (subscribedDeployment == deployment)
                 return;
             if (subscribedDeployment != null)
+            {
                 subscribedDeployment.EnemyIntentsChanged -= OnEnemyIntentsChanged;
+                subscribedDeployment.PhaseChanged -= OnPhaseChanged;
+            }
             subscribedDeployment = deployment;
             if (subscribedDeployment != null)
+            {
                 subscribedDeployment.EnemyIntentsChanged += OnEnemyIntentsChanged;
+                subscribedDeployment.PhaseChanged += OnPhaseChanged;
+            }
         }
 
         private void OnEnemyIntentsChanged()
         {
             if (selected != null && selected.Team == UnitTeam.Enemy)
                 RefreshSelectionDisplay();
+        }
+
+        private void OnPhaseChanged(BattlePhase phase)
+        {
+            if (phase != BattlePhase.PlayerTurn)
+                ClearAttackPreview();
+            RefreshSelectionDisplay();
+            RefreshActionButtons();
         }
 
         public void ToggleAttackMode()
@@ -178,6 +371,18 @@ namespace StellaStair.Input
             RefreshActionButtons();
         }
 
+        public void HandleAttackChangeButton()
+        {
+            if (deployment != null && deployment.InteractionLocked)
+                return;
+            if (selected == null || !selected.HasMultipleAttackModes || selected.HasAttacked)
+                return;
+            if (!selected.CycleAttackMode())
+                return;
+            ClearAttackPreview();
+            RefreshSelectionDisplay();
+            RefreshActionButtons();
+        }
         public void HandlePrimaryButton()
         {
             if (deployment != null && deployment.InteractionLocked)
@@ -239,25 +444,47 @@ namespace StellaStair.Input
             RefreshActionButtons();
         }
 
+        public void DebugLevelUpSelectedUnit()
+        {
+            if (selected == null || selected.Team != UnitTeam.Player || !selected.IsAlive)
+                return;
+            if (!selected.DebugLevelUp())
+                return;
+
+            RefreshSelectionDisplay();
+            RefreshActionButtons();
+        }
+
         private void Update()
         {
+            ResolveRuntimeReferences();
+            BindSceneButtonsIfMissing();
+            EnsureActionButtonListeners();
+            SubscribeToDeploymentEvents();
             RefreshActionButtons();
             if (deployment == null || deployment.InteractionLocked)
                 return;
-            if (Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame &&
-                deployment.Phase == BattlePhase.Deployment && deployment.StartBattle())
+            if (Keyboard.current != null)
             {
-                ClearSelection();
-                return;
-            }
+                if (Keyboard.current.lKey.wasPressedThisFrame)
+                    DebugLevelUpSelectedUnit();
 
-            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame &&
-                deployment.EndPlayerTurn())
-            {
-                ClearSelection();
-                return;
-            }
+                var enterPressed = Keyboard.current.enterKey.wasPressedThisFrame ||
+                                   Keyboard.current.numpadEnterKey.wasPressedThisFrame;
+                if (deployment.Phase == BattlePhase.Deployment &&
+                    (Keyboard.current.spaceKey.wasPressedThisFrame || enterPressed) && deployment.StartBattle())
+                {
+                    ClearSelection();
+                    return;
+                }
 
+                if (deployment.Phase == BattlePhase.PlayerTurn &&
+                    (Keyboard.current.spaceKey.wasPressedThisFrame || enterPressed) && deployment.EndPlayerTurn())
+                {
+                    ClearSelection();
+                    return;
+                }
+            }
             if (Mouse.current == null || worldCamera == null)
                 return;
 
@@ -308,6 +535,8 @@ namespace StellaStair.Input
             }
 
             var hit = Physics2D.OverlapPoint(world, unitLayerMask);
+            if (hit == null)
+                hit = Physics2D.OverlapPoint(world);
             if (IsAttackMode && hit != null && hit.TryGetComponent<TacticalUnit>(out var attackTargetUnit) &&
                 selected != null && attackablePositions.Contains(attackTargetUnit.Position) &&
                 attackTargetUnit != selected)
@@ -413,7 +642,7 @@ namespace StellaStair.Input
                         occupant.Team == UnitTeam.Player)
                         positions.Add(position);
                 }
-                highlighter.Show(deployment.Board, positions, unit.IsPlaced ? unit.Position : null);
+                highlighter.ShowFloor(deployment.Board, positions, unit.IsPlaced ? unit.Position : null);
             }
             else
             {
@@ -465,37 +694,45 @@ namespace StellaStair.Input
                 reachable = GridPathfinder.FindReachable(
                     deployment.Board, selected.Position, selected.MovementPoints, selected);
                 attackablePositions.Clear();
-                foreach (var origin in reachable.Keys)
-                {
-                    foreach (var position in deployment.Board.GetCellsInAttackRange(
-                                 origin, selected.AttackRange, selected.VerticalAttackRange))
-                    {
-                        if (selected.IsPositionAttackableFrom(origin, position))
-                            attackablePositions.Add(position);
-                    }
-                }
                 if (deployment.TryGetEnemyIntent(selected, out var intent))
                 {
+                    foreach (var position in selected.GetAttackTargetPositions(intent.AttackOrigin))
+                        attackablePositions.Add(position);
                     if (intent.WillAttack)
                         BuildAttackPreview(
                             selected, intent.TargetPosition, intent.AttackOrigin);
+                    foreach (var pair in intent.PredictedForcedDestinations)
+                    {
+                        previewKnockbackDestinations.Add(pair.Value);
+                        SetPreviewKnockbackGhostDestination(pair.Key, pair.Value);
+                        if (intent.WillAttack && pair.Value == intent.TargetPosition &&
+                            pair.Key != null && pair.Key.Team != selected.Team)
+                        {
+                            AddPreviewAffectedUnit(pair.Key);
+                            AddPreviewDamage(pair.Key, selected.BasicAttackDamage);
+                        }
+                    }
                     highlighter.ShowEnemyIntentPreview(
                         deployment.Board, selected.Position,
                         intent.MoveDestination, intent.WillMove,
                         intent.TargetPosition, intent.WillAttack,
                         reachable.Keys, attackablePositions,
                         previewKnockbackDestinations,
-                        previewCollisionPositions, previewVoidPositions);
+                        previewCollisionPositions, previewVoidPositions,
+                        selected, previewKnockbackGhostDestinations);
                 }
                 else
                 {
+                    foreach (var position in selected.GetAttackTargetPositions(selected.Position))
+                        attackablePositions.Add(position);
                     highlighter.ShowEnemyIntentPreview(
                         deployment.Board, selected.Position,
                         selected.Position, false,
                         selected.Position, false,
                         reachable.Keys, attackablePositions,
                         previewKnockbackDestinations,
-                        previewCollisionPositions, previewVoidPositions);
+                        previewCollisionPositions, previewVoidPositions,
+                        selected, previewKnockbackGhostDestinations);
                 }
                 return;
             }
@@ -507,8 +744,7 @@ namespace StellaStair.Input
             attackablePositions.Clear();
             if (!selected.HasAttacked)
             {
-                foreach (var position in deployment.Board.GetCellsInAttackRange(
-                             selected.Position, selected.AttackRange, selected.VerticalAttackRange))
+                foreach (var position in selected.GetAttackTargetPositions(selected.Position))
                 {
                     if (selected.CanAttackPosition(position))
                         attackablePositions.Add(position);
@@ -527,7 +763,8 @@ namespace StellaStair.Input
                         previewCollisionPositions, previewVoidPositions,
                         pendingAttackTargetsWood,
                         pendingAttackTargetsWood ? selected.AttackDamage : 0,
-                        reachable.Keys, attackablePositions);
+                        reachable.Keys, attackablePositions,
+                        previewKnockbackGhostDestinations, previewEffectPositions);
                 }
                 else
                 {
@@ -674,6 +911,16 @@ namespace StellaStair.Input
                         : IsAttackMode ? "ATK CONFIRM" : "ATK";
             }
 
+            if (attackChangeButton != null)
+            {
+                var showAttackChange = playerSelection && IsAttackMode && !selected.HasAttacked &&
+                                       !pendingMoveDestination.HasValue &&
+                                       selected.HasMultipleAttackModes;
+                attackChangeButton.gameObject.SetActive(showAttackChange);
+                attackChangeButton.interactable = showAttackChange && !locked && !selected.IsMoving;
+                if (attackChangeButtonLabel != null && selected != null)
+                    attackChangeButtonLabel.text = selected.CurrentAttackName;
+            }
             if (moveUndoButton != null)
             {
                 var showMoveUndo = playerSelection && selected.HasMoved &&
@@ -743,29 +990,146 @@ namespace StellaStair.Input
                 return;
 
             var origin = attackOrigin ?? attacker.Position;
-
-            TacticalUnit affectedUnit = null;
-            if (!attackWoodOnly)
+            if (!attackWoodOnly && attacker.IsPiercingArrowAttackPosition(origin, targetPosition))
             {
-                if (deployment.Board.TryGetOccupant(targetPosition, out var foundUnit))
-                    affectedUnit = foundUnit;
-            }
-            if (affectedUnit != null && affectedUnit != attacker)
-            {
-                AddPreviewAffectedUnit(affectedUnit);
-                AddPreviewDamage(affectedUnit, attacker.AttackDamage);
-
-                if (attacker.KnockbackDistance > 0)
+                if (attacker.HasCustomCurrentAttackModeEffectOffsets)
                 {
-                    var primaryDirection = affectedUnit.Position.X == origin.X
-                        ? attacker.FacingDirection
-                        : affectedUnit.Position.X > origin.X ? 1 : -1;
-                    PreviewKnockback(affectedUnit, primaryDirection, attacker.KnockbackDistance);
+                    foreach (var position in attacker.GetSpecialAttackEffectPositions(targetPosition))
+                    {
+                        previewEffectPositions.Add(position);
+                        if (deployment.Board.TryGetOccupant(position, out var unit) && unit != null && unit != attacker)
+                        {
+                            AddPreviewAffectedUnit(unit);
+                            AddPreviewDamage(unit, attacker.PiercingArrowDamage);
+                        }
+                    }
+                    return;
                 }
 
+                var direction = GetPreviewLineDirection(origin, targetPosition);
+                for (var step = 1; step <= 5; step++)
+                {
+                    var position = new GridPosition(origin.X + direction.x * step, origin.Y + direction.y * step);
+                    previewEffectPositions.Add(position);
+                    if (deployment.Board.TryGetOccupant(position, out var unit) && unit != null && unit != attacker)
+                    {
+                        AddPreviewAffectedUnit(unit);
+                        AddPreviewDamage(unit, attacker.PiercingArrowDamage);
+                    }
+                }
+                return;
             }
 
-            if (attacker.AreaKnockbackRadius > 0 && attacker.AreaKnockbackDistance > 0)
+            if (!attackWoodOnly && attacker.IsBowStrikeAttackPosition(origin, targetPosition))
+            {
+                if (deployment.Board.TryGetOccupant(targetPosition, out var unit) && unit != null && unit != attacker)
+                {
+                    AddPreviewAffectedUnit(unit);
+                    AddPreviewDamage(unit, attacker.BowStrikeDamage);
+                    var direction = unit.Position.X == origin.X ? attacker.FacingDirection : unit.Position.X > origin.X ? 1 : -1;
+                    PreviewKnockback(unit, direction, 2);
+                }
+                return;
+            }
+
+            if (!attackWoodOnly && attacker.IsHarpoonAttackPosition(origin, targetPosition))
+            {
+                if (deployment.Board.TryGetOccupant(targetPosition, out var unit) && unit != null && unit != attacker)
+                {
+                    AddPreviewAffectedUnit(unit);
+                    AddPreviewDamage(unit, attacker.HarpoonDamage);
+                    var direction = unit.Position.X > origin.X ? -1 : 1;
+                    PreviewKnockback(unit, direction, 1);
+                }
+                return;
+            }
+
+            if (!attackWoodOnly && attacker.IsFireballAttackPosition(origin, targetPosition))
+            {
+                foreach (var position in attacker.GetSpecialAttackEffectPositions(targetPosition))
+                {
+                    previewEffectPositions.Add(position);
+                    if (deployment.Board.TryGetOccupant(position, out var unit) && unit != null && unit != attacker)
+                    {
+                        AddPreviewAffectedUnit(unit);
+                        AddPreviewDamage(unit, attacker.FireballDamage);
+                    }
+                }
+                return;
+            }
+
+            if (!attackWoodOnly && attacker.IsIceSpikeAttackPosition(origin, targetPosition))
+            {
+                if (deployment.Board.TryGetOccupant(targetPosition, out var unit) && unit != null && unit != attacker)
+                {
+                    AddPreviewAffectedUnit(unit);
+                    AddPreviewDamage(unit, attacker.IceSpikeDamage);
+                }
+                else
+                {
+                    PreviewIceBoxFall(attacker, targetPosition);
+                }
+                return;
+            }
+
+            if (!attackWoodOnly && attacker.IsNatureFragranceAttackPosition(origin, targetPosition))
+            {
+                if (deployment.Board.TryGetOccupant(targetPosition, out var unit) && unit != null && unit != attacker)
+                {
+                    AddPreviewAffectedUnit(unit);
+                    AddPreviewHeal(unit, attacker.NatureFragranceHealAmount);
+                }
+                return;
+            }
+            if (!attackWoodOnly && attacker.IsThrustAttackPosition(origin, targetPosition))
+            {
+                var direction = targetPosition.X > origin.X ? 1 : -1;
+                AddThrustPreviewDamage(attacker, new GridPosition(origin.X + direction, origin.Y),
+                    attacker.ThrustFrontDamage, direction);
+                AddThrustPreviewDamage(attacker, new GridPosition(origin.X + direction * 2, origin.Y),
+                    attacker.ThrustBackDamage, direction);
+                return;
+            }
+
+            TacticalUnit affectedUnit = null;
+            var directlyAffectedUnits = new HashSet<TacticalUnit>();
+            if (attacker.HasCustomAttackEffectOffsets)
+            {
+                foreach (var effectPosition in attacker.GetAttackEffectPositions(targetPosition))
+                {
+                    if (attacker.IsWizardDefaultAttackMode() && effectPosition != targetPosition)
+                        continue;
+                    previewEffectPositions.Add(effectPosition);
+                    var affected = PreviewAttackEffectCell(attacker, origin, effectPosition, attackWoodOnly);
+                    if (affected != null)
+                    {
+                        directlyAffectedUnits.Add(affected);
+                        if (affectedUnit == null && affected.Position == targetPosition)
+                            affectedUnit = affected;
+                    }
+                }
+            }
+            else
+            {
+                if (!attackWoodOnly && deployment.Board.TryGetOccupant(targetPosition, out var foundUnit))
+                    affectedUnit = foundUnit;
+                if (affectedUnit != null && affectedUnit != attacker)
+                {
+                    directlyAffectedUnits.Add(affectedUnit);
+                    AddPreviewAffectedUnit(affectedUnit);
+                    AddPreviewDamage(affectedUnit, attacker.BasicAttackDamage);
+
+                    if (attacker.KnockbackDistance > 0)
+                    {
+                        var primaryDirection = affectedUnit.Position.X == origin.X
+                            ? attacker.FacingDirection
+                            : affectedUnit.Position.X > origin.X ? 1 : -1;
+                        PreviewKnockback(affectedUnit, primaryDirection, attacker.KnockbackDistance);
+                    }
+                }
+            }
+
+            if (attacker.IsWizardDefaultAttackMode() && attacker.AreaKnockbackRadius > 0 && attacker.AreaKnockbackDistance > 0)
             {
                 if (attackWoodOnly)
                 {
@@ -786,7 +1150,7 @@ namespace StellaStair.Input
                     foreach (var nearby in deployment.Board.GetOccupantsInRange(
                                  targetPosition, attacker.AreaKnockbackRadius))
                     {
-                        if (nearby == affectedUnit || nearby.Position.X == targetPosition.X)
+                        if (directlyAffectedUnits.Contains(nearby) || nearby.Position.X == targetPosition.X)
                             continue;
                         AddPreviewAffectedUnit(nearby);
                         var radialDirection = nearby.Position.X == targetPosition.X
@@ -797,6 +1161,81 @@ namespace StellaStair.Input
                     }
                 }
             }
+        }
+
+
+        private TacticalUnit PreviewAttackEffectCell(
+            TacticalUnit attacker, GridPosition origin, GridPosition effectPosition,
+            bool attackWoodOnly)
+        {
+            if (attackWoodOnly)
+                return null;
+            if (!deployment.Board.TryGetOccupant(effectPosition, out var affectedUnit) ||
+                affectedUnit == null || affectedUnit == attacker)
+                return null;
+
+            AddPreviewAffectedUnit(affectedUnit);
+            AddPreviewDamage(affectedUnit, attacker.BasicAttackDamage);
+            if (attacker.KnockbackDistance > 0)
+            {
+                var direction = affectedUnit.Position.X == origin.X
+                    ? attacker.FacingDirection
+                    : affectedUnit.Position.X > origin.X ? 1 : -1;
+                PreviewKnockback(affectedUnit, direction, attacker.KnockbackDistance);
+            }
+            return affectedUnit;
+        }
+        private static Vector2Int GetPreviewLineDirection(GridPosition origin, GridPosition target)
+        {
+            var dx = Math.Sign(target.X - origin.X);
+            var dy = Math.Sign(target.Y - origin.Y);
+            if (Mathf.Abs(target.X - origin.X) >= Mathf.Abs(target.Y - origin.Y))
+                dy = 0;
+            else
+                dx = 0;
+            return new Vector2Int(dx, dy);
+        }
+        private void PreviewIceBoxFall(TacticalUnit attacker, GridPosition spawnPosition)
+        {
+            if (attacker == null || deployment == null || deployment.Board == null)
+                return;
+
+            var result = deployment.Board.ResolveVerticalFall(
+                spawnPosition, attacker, out var landing, out var fallDistance, out var blockingUnit);
+            if (result != KnockbackLandingType.Collision || blockingUnit == null || !blockingUnit.IsAlive)
+                return;
+
+            AddPreviewAffectedUnit(blockingUnit);
+            var fallDamage = Mathf.Min(1, Mathf.Max(0, fallDistance - 1));
+            var direction = attacker.FacingDirection;
+            var pushResult = deployment.Board.ResolveKnockbackLanding(
+                blockingUnit.Position, direction, blockingUnit, out var pushedLanding, out _, out _);
+
+            if (pushResult == KnockbackLandingType.Landing)
+            {
+                previewKnockbackDestinations.Add(pushedLanding);
+                SetPreviewKnockbackGhostDestination(blockingUnit, pushedLanding);
+                if (fallDamage > 0)
+                    AddPreviewDamage(blockingUnit, fallDamage);
+                return;
+            }
+
+            AddPreviewDamage(blockingUnit, 1);
+            previewCollisionPositions.Add(blockingUnit.Position);
+        }
+        private void AddThrustPreviewDamage(
+            TacticalUnit attacker, GridPosition position, int damage, int direction)
+        {
+            if (attacker == null || damage <= 0)
+                return;
+            if (!deployment.Board.TryGetOccupant(position, out var unit) ||
+                unit == null || unit == attacker || unit.Team == attacker.Team)
+                return;
+
+            AddPreviewAffectedUnit(unit);
+            AddPreviewDamage(unit, damage);
+            if (attacker.ThrustHasKnockback)
+                PreviewKnockback(unit, direction, 1);
         }
 
         private void ClearAttackPreview()
@@ -815,8 +1254,10 @@ namespace StellaStair.Input
             pendingAttackTarget = null;
             pendingAttackTargetsWood = false;
             previewKnockbackDestinations.Clear();
+            previewKnockbackGhostDestinations.Clear();
             previewCollisionPositions.Clear();
             previewVoidPositions.Clear();
+            previewEffectPositions.Clear();
         }
 
         private void PreviewKnockback(TacticalUnit affectedUnit, int direction, int distance)
@@ -851,6 +1292,8 @@ namespace StellaStair.Input
                             AddPreviewDamage(blockingUnit, impactFallDamage);
                             previewKnockbackDestinations.Add(pushedLanding);
                             previewKnockbackDestinations.Add(landing);
+                            SetPreviewKnockbackGhostDestination(blockingUnit, pushedLanding);
+                            SetPreviewKnockbackGhostDestination(affectedUnit, landing);
                         }
                         else
                         {
@@ -885,8 +1328,15 @@ namespace StellaStair.Input
                     affectedUnit.MaxHealth, knockbackFallDamage + stepFallDamage);
                 AddPreviewDamage(affectedUnit, cappedFallDamage - knockbackFallDamage);
                 knockbackFallDamage = cappedFallDamage;
-                previewKnockbackDestinations.Add(current);
+                SetPreviewKnockbackGhostDestination(affectedUnit, current);
             }
+        }
+
+        private void SetPreviewKnockbackGhostDestination(TacticalUnit unit, GridPosition destination)
+        {
+            if (unit == null || !unit.IsAlive)
+                return;
+            previewKnockbackGhostDestinations[unit] = destination;
         }
 
         private void AddPreviewAffectedUnit(TacticalUnit unit)
@@ -899,6 +1349,16 @@ namespace StellaStair.Input
             unit.SetAttackPreviewed(true);
         }
 
+        private void AddPreviewHeal(TacticalUnit unit, int amount)
+        {
+            if (unit == null || amount <= 0)
+                return;
+            var healAmount = Mathf.Min(amount, unit.MaxHealth - unit.CurrentHealth);
+            if (healAmount <= 0)
+                return;
+            AddPreviewAffectedUnit(unit);
+            unit.SetPreviewDamage(-healAmount);
+        }
         private void AddPreviewDamage(TacticalUnit unit, int damage)
         {
             if (unit == null || damage <= 0)
@@ -911,4 +1371,3 @@ namespace StellaStair.Input
         }
     }
 }
-

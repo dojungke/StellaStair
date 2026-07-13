@@ -1,5 +1,6 @@
 using StellaStair.Battle;
 using StellaStair.Grid;
+using StellaStair.Input;
 using StellaStair.Presentation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -54,10 +55,66 @@ namespace StellaStair.Editor
 
         private void SaveSelected()
         {
+            EnsureActionUiInScene();
+            EnsureLevelUpUiInScene();
+            DialogueUiBinder.BindCurrentSceneDialogueUi();
             selectedUi.CaptureCurrentScene();
             SaveRuntimePrefab(selectedUi);
             EditorUtility.SetDirty(selectedUi);
             AssetDatabase.SaveAssets();
+        }
+
+        private static void EnsureActionUiInScene()
+        {
+            TacticalInputController.EnsureDefaultActionButtons();
+            ActionButtonBinder.BindCurrentSceneButtons();
+        }
+
+        private static void BindCurrentSceneLevelUpUi(LevelUpUpgradePresenter presenter)
+        {
+            if (presenter == null)
+                return;
+            GameObject overlay = null;
+            foreach (var rect in Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include))
+            {
+                if (rect != null && rect.name == "Level Up Upgrade Overlay")
+                {
+                    overlay = rect.gameObject;
+                    break;
+                }
+            }
+            if (overlay == null)
+                return;
+
+            var panelTransform = FindChildByName(overlay.transform, "Level Up Upgrade Panel");
+            presenter.BindSceneUi(overlay, panelTransform != null ? panelTransform.gameObject : null);
+        }
+
+        private static Transform FindChildByName(Transform root, string childName)
+        {
+            if (root == null)
+                return null;
+            foreach (var child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child != null && child.name == childName)
+                    return child;
+            }
+            return null;
+        }
+        private static void EnsureLevelUpUiInScene()
+        {
+            var battle = Object.FindAnyObjectByType<DeploymentManager>();
+            if (battle == null)
+                return;
+            var presenter = battle.GetComponent<LevelUpUpgradePresenter>();
+            if (presenter == null)
+                presenter = battle.gameObject.AddComponent<LevelUpUpgradePresenter>();
+            presenter.Configure(battle);
+            BindCurrentSceneLevelUpUi(presenter);
+            presenter.EnsureUiExistsInScene();
+            EditorUtility.SetDirty(presenter);
+            if (presenter.gameObject.scene.IsValid())
+                EditorSceneManager.MarkSceneDirty(presenter.gameObject.scene);
         }
 
         private static void SaveRuntimePrefab(BattleUiData data)
@@ -90,6 +147,9 @@ namespace StellaStair.Editor
         private void ApplySelected()
         {
             selectedUi.ApplyToCurrentScene();
+            EnsureActionUiInScene();
+            EnsureLevelUpUiInScene();
+            DialogueUiBinder.BindCurrentSceneDialogueUi();
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             SceneView.RepaintAll();
         }

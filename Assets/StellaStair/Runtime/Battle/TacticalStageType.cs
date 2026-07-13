@@ -4,7 +4,8 @@ namespace StellaStair.Battle
     {
         Elimination,
         Attack,
-        Defense
+        Defense,
+        Escort
     }
 
     public enum RoundStartCondition

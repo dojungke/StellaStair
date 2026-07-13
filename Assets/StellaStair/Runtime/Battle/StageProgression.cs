@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Presentation;
 using StellaStair.Units;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 
 namespace StellaStair.Battle
 {
@@ -15,6 +17,15 @@ namespace StellaStair.Battle
     {
         [SerializeField] private List<TacticalMapData> registeredStages = new();
         [SerializeField] private BattleUiData commonBattleUi;
+        [Header("Stage Introduction")]
+        [SerializeField] private GameObject stageCanvas;
+        [SerializeField] private TMP_Text stageNameLabel;
+        [SerializeField] private TMP_Text stageDescriptionLabel;
+        [SerializeField] private Button stageStartButton;
+        [Header("Dialogue")]
+        [SerializeField] private TacticalDialogueDatabase dialogueDatabase;
+        [SerializeField] private TacticalDialoguePresenter dialoguePresenter;
+        [SerializeField] private bool waitForStageStartButton = true;
         [SerializeField] private bool avoidImmediateRepeat = true;
         [SerializeField] private bool autoAdvanceOnVictory = true;
         [SerializeField, Min(0f)] private float advanceDelay = 1.5f;
@@ -27,6 +38,10 @@ namespace StellaStair.Battle
         private int nextRoundIndex;
         private Coroutine roundRoutine;
         private bool advancing;
+        private bool stageIntroLocked;
+        private bool startingBattleFromDialogue;
+        private bool beforeBattleDialoguePlayed;
+        private bool defeatDialogueStarted;
 
         public TacticalMapData CurrentStage { get; private set; }
         public IReadOnlyList<TacticalMapData> RegisteredStages => registeredStages;
@@ -41,28 +56,196 @@ namespace StellaStair.Battle
                 previousRoundSnapshot = CreateSnapshotFromStage(CurrentStage);
                 nextRoundIndex = 0;
                 lastStageName = CurrentStage.name;
-                Debug.Log($"Stage entered: {CurrentStage.name}");
+                Debug.Log($"Stage entered: {CurrentStage.DisplayName}");
             }
             if (commonBattleUi != null)
                 commonBattleUi.ApplyToCurrentScene();
+            if (dialogueDatabase == null)
+                dialogueDatabase = Resources.Load<TacticalDialogueDatabase>("TacticalDialogueDatabase");
+            ApplyStagePresentation();
         }
 
         private void Start()
         {
             battle = FindAnyObjectByType<DeploymentManager>();
             if (battle != null)
+            {
+                EnsurePlayerPartySpawner(battle).SpawnDefaultPartyIfNeeded();
                 battle.ConfigureStage(
                     CurrentStage != null ? CurrentStage.stageType : TacticalStageType.Elimination,
-                    CurrentStage != null ? CurrentStage.defenseTurnsToSurvive : 5);
+                    CurrentStage != null ? CurrentStage.defenseTurnsToSurvive : 5,
+                    CurrentStage != null ? CurrentStage.escortTurnsToSurvive : 5,
+                    CurrentStage != null ? CurrentStage.escortUnitProgressKey : string.Empty);
+            }
             if (battle != null)
             {
                 battle.PhaseChanged += OnPhaseChanged;
                 battle.PlayerTurnStarted += OnPlayerTurnStarted;
                 battle.EnemyForcesDefeated += OnEnemyForcesDefeated;
                 UpdatePendingRoundFlag();
+                LockForStageIntroIfNeeded();
+                if (!stageIntroLocked)
+                    StartCoroutine(BeforeBattleDialogueRoutine());
             }
         }
 
+        private void ApplyStagePresentation()
+        {
+            if (CurrentStage == null)
+                return;
+
+            if (stageCanvas == null)
+                stageCanvas = FindStageCanvas();
+            if (stageCanvas == null)
+                return;
+
+            stageNameLabel ??= FindStageText(stageCanvas.transform, false);
+            stageDescriptionLabel ??= FindStageText(stageCanvas.transform, true);
+            if (stageNameLabel != null)
+                stageNameLabel.text = CurrentStage.DisplayName;
+            if (stageDescriptionLabel != null)
+                stageDescriptionLabel.text = CurrentStage.mapDescription ?? string.Empty;
+            stageStartButton ??= FindStageStartButton(stageCanvas.transform);
+            if (stageStartButton != null)
+            {
+                stageStartButton.onClick.RemoveListener(StartStageFromIntro);
+                stageStartButton.onClick.AddListener(StartStageFromIntro);
+            }
+            stageCanvas.SetActive(true);
+        }
+
+        private static GameObject FindStageCanvas()
+        {
+            foreach (var rect in FindObjectsByType<RectTransform>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (rect == null || !IsStageRootName(rect.name))
+                    continue;
+                return rect.gameObject;
+            }
+            return null;
+        }
+
+        private static TMP_Text FindStageText(Transform root, bool description)
+        {
+            TMP_Text fallback = null;
+            foreach (var label in root.GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (label == null)
+                    continue;
+                fallback ??= label;
+                var normalized = NormalizeUiName(label.name);
+                if (description && (normalized.Contains("description") || normalized.EndsWith("desc")))
+                    return label;
+                if (!description && (normalized.Contains("title") || normalized.Contains("stagename") ||
+                                     normalized.Contains("mapname")))
+                    return label;
+            }
+            return description ? null : fallback;
+        }
+
+        private static Button FindStageStartButton(Transform root)
+        {
+            Button fallback = null;
+            foreach (var button in root.GetComponentsInChildren<Button>(true))
+            {
+                if (button == null)
+                    continue;
+                fallback ??= button;
+                var normalized = NormalizeUiName(button.name);
+                if (normalized.Contains("start") || normalized.Contains("begin") || button.name.Contains("\uC2DC\uC791"))
+                    return button;
+            }
+            return fallback;
+        }
+
+        private void LockForStageIntroIfNeeded()
+        {
+            if (!waitForStageStartButton || stageIntroLocked || stageCanvas == null || !stageCanvas.activeSelf)
+                return;
+            if (stageStartButton == null)
+            {
+                Debug.LogWarning("Stage intro canvas is active, but no start button was found.", this);
+                return;
+            }
+
+            battle.PushInteractionLock();
+            stageIntroLocked = true;
+        }
+
+        public void StartStageFromIntro()
+        {
+            if (startingBattleFromDialogue)
+                return;
+            HideStageIntroUiForDialogue();
+            if (stageIntroLocked && battle != null)
+                battle.PopInteractionLock();
+            stageIntroLocked = false;
+
+            StartCoroutine(StartBattleAfterIntroDialogueRoutine());
+        }
+
+
+        private void HideStageIntroUiForDialogue()
+        {
+            if (stageCanvas == null)
+                return;
+
+            var presenter = EnsureDialoguePresenter();
+            var dialogueRoot = presenter != null ? presenter.DialogueRoot : null;
+            var dialogueUsesStageCanvas = dialogueRoot != null &&
+                (dialogueRoot == stageCanvas || dialogueRoot.transform.IsChildOf(stageCanvas.transform));
+            if (!dialogueUsesStageCanvas)
+            {
+                stageCanvas.SetActive(false);
+                return;
+            }
+
+            stageCanvas.SetActive(true);
+            SetIntroElementVisible(stageNameLabel, false);
+            SetIntroElementVisible(stageDescriptionLabel, false);
+            if (stageStartButton != null)
+                stageStartButton.gameObject.SetActive(false);
+        }
+
+        private static void SetIntroElementVisible(Component component, bool visible)
+        {
+            if (component != null)
+                component.gameObject.SetActive(visible);
+        }
+        private IEnumerator StartBattleAfterIntroDialogueRoutine()
+        {
+            startingBattleFromDialogue = true;
+            beforeBattleDialoguePlayed = true;
+            yield return PlayStageDialogueRoutine(TacticalDialogueTiming.BeforeBattle);
+            startingBattleFromDialogue = false;
+            if (stageCanvas != null)
+                stageCanvas.SetActive(false);
+            if (battle != null && battle.Phase == BattlePhase.Deployment)
+                battle.StartBattle();
+        }
+
+        private static bool IsStageRootName(string value)
+        {
+            var normalized = NormalizeUiName(value);
+            return normalized == "stagecanvas" || normalized == "stagepanel" ||
+                   normalized == "stageintro" || normalized == "stageintroduction" ||
+                   value.Contains("\uC2A4\uD14C\uC774\uC9C0") && (value.Contains("\uCEA0\uBC84\uC2A4") || value.Contains("Canvas"));
+        }
+
+        private static string NormalizeUiName(string value)
+        {
+            return string.IsNullOrEmpty(value)
+                ? string.Empty
+                : value.Replace(" ", string.Empty).Replace("_", string.Empty).Replace("-", string.Empty).ToLowerInvariant();
+        }
+        private static PlayerPartySpawner EnsurePlayerPartySpawner(DeploymentManager targetBattle)
+        {
+            var spawner = targetBattle.GetComponent<PlayerPartySpawner>();
+            if (spawner == null)
+                spawner = targetBattle.gameObject.AddComponent<PlayerPartySpawner>();
+            return spawner;
+        }
         private TacticalMapData SelectRandomStage()
         {
             var available = new List<TacticalMapData>();
@@ -84,8 +267,16 @@ namespace StellaStair.Battle
 
         private void OnPhaseChanged(BattlePhase phase)
         {
-            if (phase == BattlePhase.Victory && autoAdvanceOnVictory && !advancing)
-                StartCoroutine(AdvanceRoutine());
+            if (phase == BattlePhase.Victory && !advancing)
+                StartCoroutine(VictoryRoutine());
+            if (phase == BattlePhase.Defeat && !defeatDialogueStarted)
+                StartCoroutine(DefeatDialogueRoutine());
+        }
+
+        private IEnumerator BeforeBattleDialogueRoutine()
+        {
+            beforeBattleDialoguePlayed = true;
+            yield return PlayStageDialogueRoutine(TacticalDialogueTiming.BeforeBattle);
         }
 
         private void OnPlayerTurnStarted(int turnNumber)
@@ -440,9 +631,76 @@ namespace StellaStair.Battle
             }
         }
 
-        private IEnumerator AdvanceRoutine()
+        private IEnumerator VictoryRoutine()
         {
             advancing = true;
+            yield return WaitForLevelUpSelectionRoutine();
+            yield return PlayStageDialogueRoutine(TacticalDialogueTiming.AfterVictory);
+            if (autoAdvanceOnVictory)
+                yield return AdvanceRoutine();
+        }
+
+        private IEnumerator WaitForLevelUpSelectionRoutine()
+        {
+            yield return null;
+            while (battle != null && battle.HasPendingLevelUpSelection)
+                yield return null;
+        }
+
+        private IEnumerator DefeatDialogueRoutine()
+        {
+            defeatDialogueStarted = true;
+            yield return PlayStageDialogueRoutine(TacticalDialogueTiming.AfterDefeat);
+        }
+
+        private IEnumerator PlayStageDialogueRoutine(TacticalDialogueTiming timing)
+        {
+            if (dialogueDatabase == null)
+                dialogueDatabase = Resources.Load<TacticalDialogueDatabase>("TacticalDialogueDatabase");
+            if (dialogueDatabase == null)
+                yield break;
+
+            var lines = dialogueDatabase.GetLines(CurrentStage, timing);
+            if (lines.Count == 0)
+                yield break;
+
+            dialoguePresenter = EnsureDialoguePresenter();
+            if (dialoguePresenter == null)
+                yield break;
+
+            if (battle != null)
+                battle.PushInteractionLock();
+            try
+            {
+                yield return dialoguePresenter.Play(lines, dialogueDatabase);
+            }
+            finally
+            {
+                if (battle != null)
+                    battle.PopInteractionLock();
+            }
+        }
+
+        private TacticalDialoguePresenter EnsureDialoguePresenter()
+        {
+            if (dialoguePresenter != null)
+                return dialoguePresenter;
+            var presenters = FindObjectsByType<TacticalDialoguePresenter>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (presenters.Length > 0)
+            {
+                dialoguePresenter = presenters[0];
+                return dialoguePresenter;
+            }
+            return gameObject.AddComponent<TacticalDialoguePresenter>();
+        }
+
+        private IEnumerator AdvanceRoutine()
+        {
+            while (battle != null && battle.InteractionLocked)
+                yield return null;
+            if (battle != null)
+                PlayerPartySpawner.SavePartyProgress(battle.PlayerUnits);
             if (advanceDelay > 0f)
                 yield return new WaitForSecondsRealtime(advanceDelay);
             var scene = SceneManager.GetActiveScene();
@@ -451,6 +709,13 @@ namespace StellaStair.Battle
 
         private void OnDestroy()
         {
+            if (stageStartButton != null)
+                stageStartButton.onClick.RemoveListener(StartStageFromIntro);
+            if (stageIntroLocked && battle != null)
+            {
+                battle.PopInteractionLock();
+                stageIntroLocked = false;
+            }
             if (battle != null)
                 battle.PhaseChanged -= OnPhaseChanged;
             if (battle != null)

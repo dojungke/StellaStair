@@ -13,40 +13,85 @@ MonoBehaviour:
   m_Name: BattleUI
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Presentation.BattleUiData
   elements:
-  - hierarchyPath: Canvas/Button/Text (TMP)
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons
     active: 1
     anchorMin: {x: 0, y: 0}
     anchorMax: {x: 1, y: 1}
-    anchoredPosition: {x: 0, y: 0}
+    anchoredPosition: {x: 0, y: 344.075}
     sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (4)/Text (TMP)
+      (1)
+    active: 1
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -500}
+    sizeDelta: {x: 500, y: 1040}
     pivot: {x: 0.5, y: 0.5}
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 1
-    tmpText: Button
-  - hierarchyPath: Canvas/Button (1)
+    tmpText: effect
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Hint
     active: 1
-    anchorMin: {x: 1, y: 0}
-    anchorMax: {x: 1, y: 0}
-    anchoredPosition: {x: -600, y: 250}
-    sizeDelta: {x: 300, y: 300}
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    anchoredPosition: {x: 320, y: -403.01675}
+    sizeDelta: {x: 584, y: 25.96648}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Turn Button
+    active: 1
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    anchoredPosition: {x: 251, y: -562}
+    sizeDelta: {x: 300, y: 200}
     pivot: {x: 0.5, y: 0.5}
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 0
     tmpText: 
-  - hierarchyPath: Canvas/Button
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (4)/Text (TMP)
     active: 1
-    anchorMin: {x: 1, y: 0}
-    anchorMax: {x: 1, y: 0}
-    anchoredPosition: {x: -250, y: 250}
-    sizeDelta: {x: 300, y: 300}
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -75}
+    sizeDelta: {x: 500, y: 1040}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: name
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
     pivot: {x: 0.5, y: 0.5}
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 0
     tmpText: 
-  - hierarchyPath: Canvas/Button (2)/Text (TMP)
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Title
+    active: 1
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -75}
+    sizeDelta: {x: 750, y: 40.80447}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: level up!
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Attack Button/Label
     active: 1
     anchorMin: {x: 0, y: 0}
     anchorMax: {x: 1, y: 1}
@@ -56,8 +101,8 @@ MonoBehaviour:
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 1
-    tmpText: Button
-  - hierarchyPath: Canvas/Button (1)/Text (TMP)
+    tmpText: ATTACK
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Turn Button/Label
     active: 1
     anchorMin: {x: 0, y: 0}
     anchorMax: {x: 1, y: 1}
@@ -67,8 +112,19 @@ MonoBehaviour:
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 1
-    tmpText: Button
-  - hierarchyPath: Canvas
+    tmpText: TURN END
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Hint
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 200, y: 50}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas
     active: 1
     anchorMin: {x: 0, y: 0}
     anchorMax: {x: 0, y: 0}
@@ -79,15 +135,256 @@ MonoBehaviour:
     localRotationZ: 0
     hasTmpText: 0
     tmpText: 
-  - hierarchyPath: Canvas/Button (2)
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay
+    active: 0
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (5)/Text (TMP)
+      (1)
     active: 1
-    anchorMin: {x: 0, y: 1}
-    anchorMax: {x: 0, y: 1}
-    anchoredPosition: {x: 250, y: -250}
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -500}
+    sizeDelta: {x: 500, y: 1040}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: effect
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Cancel Button/Label
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: CANCEL
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button/Label
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: -40, y: -16}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 640, y: 440}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (4)
+    active: 1
+    anchorMin: {x: 0.5, y: 0}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: -600, y: 0}
+    sizeDelta: {x: 500, y: -400}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button/Label
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: -40, y: -16}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button/Label
+    active: 1
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: -40, y: -16}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 100, y: 100}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (3)
+    active: 1
+    anchorMin: {x: 0.5, y: 0}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 500, y: -400}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 100, y: 100}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (3)/Text (TMP)
+      (1)
+    active: 1
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -500}
+    sizeDelta: {x: 500, y: 1040}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: effect
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (5)/Text (TMP)
+    active: 1
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -75}
+    sizeDelta: {x: 500, y: 1040}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: name
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Upgrade
+      Option Button
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 100, y: 100}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Title
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 200, y: 50}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Attack Button
+    active: 1
+    anchorMin: {x: 1, y: 0}
+    anchorMax: {x: 1, y: 0}
+    anchoredPosition: {x: -200, y: 0}
     sizeDelta: {x: 300, y: 200}
     pivot: {x: 0.5, y: 0.5}
     localScale: {x: 1, y: 1, z: 1}
     localRotationZ: 0
     hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay
+    active: 0
+    anchorMin: {x: 0, y: 0}
+    anchorMax: {x: 1, y: 1}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 0, y: 0}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Unit
+      Info
+    active: 1
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    anchoredPosition: {x: 320, y: -89.78771}
+    sizeDelta: {x: 584, y: 25.96648}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Runtime Action Buttons/Cancel Button
+    active: 1
+    anchorMin: {x: 1, y: 0}
+    anchorMax: {x: 1, y: 0}
+    anchoredPosition: {x: -600, y: 0}
+    sizeDelta: {x: 300, y: 200}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (3)/Text (TMP)
+    active: 1
+    anchorMin: {x: 0.5, y: 1}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 0, y: -75}
+    sizeDelta: {x: 500, y: 1040}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
+    tmpText: name
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Button (5)
+    active: 1
+    anchorMin: {x: 0.5, y: 0}
+    anchorMax: {x: 0.5, y: 1}
+    anchoredPosition: {x: 600, y: 0}
+    sizeDelta: {x: 500, y: -400}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 0
+    tmpText: 
+  - hierarchyPath: BattleUI/Canvas/Level Up Upgrade Overlay/Level Up Upgrade Panel/Unit
+      Info
+    active: 1
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 200, y: 50}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    localRotationZ: 0
+    hasTmpText: 1
     tmpText: 
   runtimeUiPrefab: {fileID: 1825159638559018748, guid: fe5889ceb30652d4f95e33a3503408d3, type: 3}

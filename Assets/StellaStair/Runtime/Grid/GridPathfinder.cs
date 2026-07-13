@@ -6,7 +6,8 @@ namespace StellaStair.Grid
     public static class GridPathfinder
     {
         public static IReadOnlyDictionary<GridPosition, int> FindReachable(
-            TacticalBoard board, GridPosition start, int movementPoints, TacticalUnit mover)
+            TacticalBoard board, GridPosition start, int movementPoints, TacticalUnit mover,
+            bool allowLadders = true)
         {
             var traversalCosts = new Dictionary<GridPosition, int> { [start] = 0 };
             var reachable = new Dictionary<GridPosition, int> { [start] = 0 };
@@ -20,7 +21,7 @@ namespace StellaStair.Grid
                 if (nextCost > movementPoints)
                     continue;
 
-                foreach (var next in board.GetNeighbors(current, mover, true))
+                foreach (var next in board.GetNeighbors(current, mover, true, allowLadders))
                 {
                     if (traversalCosts.ContainsKey(next))
                         continue;
@@ -37,7 +38,7 @@ namespace StellaStair.Grid
 
         public static bool TryFindPath(
             TacticalBoard board, GridPosition start, GridPosition goal, int maxCost,
-            TacticalUnit mover, out List<GridPosition> path)
+            TacticalUnit mover, out List<GridPosition> path, bool allowLadders = true)
         {
             path = new List<GridPosition>();
             if (!board.CanEnter(goal, mover))
@@ -66,7 +67,7 @@ namespace StellaStair.Grid
                     return true;
                 }
 
-                foreach (var next in board.GetNeighbors(current, mover, true))
+                foreach (var next in board.GetNeighbors(current, mover, true, allowLadders))
                 {
                     var newCost = cost[current] + 1;
                     if (newCost > maxCost || cost.TryGetValue(next, out var oldCost) && newCost >= oldCost)
