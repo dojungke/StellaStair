@@ -29,6 +29,9 @@ namespace StellaStair.Battle
         private TacticalBoard subscribedBoard;
         private int interactionLockCount;
         private bool stageClearExperienceGranted;
+        private int levelUpPreparationCount;
+        private readonly Queue<TacticalUnit> pendingLevelUpUnits = new();
+        private bool processingLevelUpQueue;
         private LevelUpUpgradePresenter levelUpUpgradePresenter;
         private TacticalUnit escortUnit;
 
@@ -49,12 +52,15 @@ namespace StellaStair.Battle
         public event Action<TacticalUnit, TacticalUnit, string> EnemyKilled;
         public event Action<TacticalUnit, TacticalUnit, int> UnitHealed;
         public event Action<TacticalUnit> LevelUpUpgradeSelected;
+        public event Func<TacticalUnit, IEnumerator> BeforeLevelUp;
         public event Action<TacticalUnit, string> SkillUsed;
+        public event Func<TacticalUnit, string, GridPosition, IEnumerator> BeforeAttack;
         public bool WaitForPendingRounds { get; set; }
         public int CurrentPlayerTurn { get; private set; }
         public bool InteractionLocked => interactionLockCount > 0 ||
             board != null && board.HasUnitsResolvingForcedMovement();
         public bool HasPendingLevelUpSelection =>
+            levelUpPreparationCount > 0 ||
             levelUpUpgradePresenter != null && levelUpUpgradePresenter.HasPendingSelection;
 
         private void Awake()
@@ -1320,6 +1326,8 @@ private void BeginUnitsBattle(IEnumerable<TacticalUnit> units)
             unit.Healed += OnUnitHealed;
             unit.AttackUsed -= OnUnitAttackUsed;
             unit.AttackUsed += OnUnitAttackUsed;
+            unit.BeforeAttack -= OnUnitBeforeAttack;
+            unit.BeforeAttack += OnUnitBeforeAttack;
         }
 
         private void ObserveObjectives()
@@ -1334,14 +1342,61 @@ private void BeginUnitsBattle(IEnumerable<TacticalUnit> units)
 
         private void OnUnitLeveledUp(TacticalUnit unit, int level)
         {
-            EnsureLevelUpUpgradePresenter();
-            levelUpUpgradePresenter.Enqueue(unit);
+            if (unit == null)
+                return;
+
+            levelUpPreparationCount++;
+            pendingLevelUpUnits.Enqueue(unit);
+            if (!processingLevelUpQueue)
+                StartCoroutine(ProcessLevelUpQueueRoutine());
+        }
+
+        private IEnumerator ProcessLevelUpQueueRoutine()
+        {
+            processingLevelUpQueue = true;
+            while (pendingLevelUpUnits.Count > 0)
+            {
+                var unit = pendingLevelUpUnits.Dequeue();
+                if (unit != null && unit.IsAlive)
+                {
+                    if (BeforeLevelUp != null)
+                    {
+                        foreach (Func<TacticalUnit, IEnumerator> handler in BeforeLevelUp.GetInvocationList())
+                        {
+                            var routine = handler(unit);
+                            if (routine != null)
+                                yield return routine;
+                        }
+                    }
+
+                    EnsureLevelUpUpgradePresenter();
+                    levelUpUpgradePresenter.Enqueue(unit);
+                }
+
+                levelUpPreparationCount = Mathf.Max(0, levelUpPreparationCount - 1);
+                while (levelUpUpgradePresenter != null && levelUpUpgradePresenter.HasPendingSelection)
+                    yield return null;
+            }
+            processingLevelUpQueue = false;
         }
 
         private void OnLevelUpUpgradeSelected(TacticalUnit unit)
         {
             if (unit != null && unit.IsAlive)
                 LevelUpUpgradeSelected?.Invoke(unit);
+        }
+
+        private IEnumerator OnUnitBeforeAttack(TacticalUnit unit, string skillKey, GridPosition targetPosition)
+        {
+            if (BeforeAttack == null)
+                yield break;
+
+            foreach (Func<TacticalUnit, string, GridPosition, IEnumerator> handler in BeforeAttack.GetInvocationList())
+            {
+                var routine = handler(unit, skillKey, targetPosition);
+                if (routine != null)
+                    yield return routine;
+            }
         }
 
         private void OnUnitAttackUsed(TacticalUnit unit, string skillKey)
@@ -1401,10 +1456,10 @@ private void BeginUnitsBattle(IEnumerable<TacticalUnit> units)
             var killer = unit != null ? unit.LastDamageSource : null;
             if (unit != null)
             {
-                AwardEnemyKillExperience(unit);
-                enemyStartPositions.Remove(unit);
                 if (unit.Team == UnitTeam.Enemy && killer != null && killer.Team == UnitTeam.Player && killer.IsAlive)
                     EnemyKilled?.Invoke(killer, unit, unit.LastDamageSkillKey);
+                AwardEnemyKillExperience(unit);
+                enemyStartPositions.Remove(unit);
             }
             enemyIntents.RemoveAll(intent => intent.Enemy == null || !intent.Enemy.IsAlive);
             EnemyIntentsChanged?.Invoke();

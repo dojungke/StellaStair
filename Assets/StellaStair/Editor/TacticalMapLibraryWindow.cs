@@ -34,6 +34,10 @@ namespace StellaStair.Editor
                 EditorGUILayout.LabelField("Map Description");
                 var mapDescription = EditorGUILayout.TextArea(
                     selectedMap.mapDescription ?? string.Empty, GUILayout.MinHeight(48f));
+                var backgroundSprite = (Sprite)EditorGUILayout.ObjectField(
+                    "Background Image", selectedMap.backgroundSprite, typeof(Sprite), false);
+                var backgroundTint = EditorGUILayout.ColorField(
+                    "Background Tint", selectedMap.BackgroundTint);
                 var stageType = (TacticalStageType)EditorGUILayout.EnumPopup(
                     "Stage Type", selectedMap.stageType);
                 var attackObjectiveHealth = selectedMap.AttackObjectiveMaxHealth;
@@ -74,6 +78,8 @@ namespace StellaStair.Editor
                     Undo.RecordObject(selectedMap, "Change Map Settings");
                     selectedMap.mapName = mapName?.Trim() ?? string.Empty;
                     selectedMap.mapDescription = mapDescription ?? string.Empty;
+                    selectedMap.backgroundSprite = backgroundSprite;
+                    selectedMap.backgroundTint = backgroundTint;
                     selectedMap.stageType = stageType;
                     selectedMap.attackObjectiveMaxHealth = Mathf.Max(1, attackObjectiveHealth);
                     selectedMap.defenseObjectiveMaxHealth = Mathf.Max(1, defenseObjectiveHealth);

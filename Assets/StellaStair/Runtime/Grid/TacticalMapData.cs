@@ -64,6 +64,8 @@ namespace StellaStair.Grid
         public List<Cell> enemySoldierSpawns = new();
         public string mapName = string.Empty;
         [TextArea(2, 5)] public string mapDescription = string.Empty;
+        public Sprite backgroundSprite;
+        public Color backgroundTint = Color.white;
         public List<UiElement> uiElements = new();
         public List<Round> rounds = new();
         public TacticalStageType stageType = TacticalStageType.Elimination;
@@ -77,6 +79,7 @@ namespace StellaStair.Grid
         private static readonly List<Cell> EmptyCells = new();
 
         public string DisplayName => string.IsNullOrWhiteSpace(mapName) ? name : mapName.Trim();
+        public Color BackgroundTint => backgroundTint.a > 0f ? backgroundTint : Color.white;
         public int AttackObjectiveMaxHealth => attackObjectiveMaxHealth > 0 ? attackObjectiveMaxHealth : 8;
         public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth > 0 ? defenseObjectiveMaxHealth : 12;
 

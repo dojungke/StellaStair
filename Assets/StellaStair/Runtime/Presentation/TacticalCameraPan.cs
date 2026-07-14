@@ -1,3 +1,5 @@
+using System.Collections;
+using StellaStair.Units;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -14,6 +16,8 @@ namespace StellaStair.Presentation
         [SerializeField] private Vector2 minimumPosition = new(-12f, -3f);
         [SerializeField] private Vector2 maximumPosition = new(12f, 8f);
         [SerializeField, Min(1f)] private float leftDragThreshold = 8f;
+        [SerializeField] private float focusVerticalOffset = 0.5f;
+        [SerializeField, Min(0f)] private float minimumFocusDistance = 3f;
 
         private Camera controlledCamera;
         private Vector2 previousPointerPosition;
@@ -24,6 +28,84 @@ namespace StellaStair.Presentation
         public bool SuppressLeftClickThisFrame { get; private set; }
 
         private void Awake() => controlledCamera = GetComponent<Camera>();
+
+        public IEnumerator FocusOn(TacticalUnit unit, float duration = 0.35f)
+        {
+            if (unit == null || controlledCamera == null)
+                yield break;
+
+            var start = transform.position;
+            var target = unit.GetPreviewStandingWorldPosition(unit.Position);
+            target.y += focusVerticalOffset;
+            target.z = start.z;
+            if (Vector2.Distance(start, target) <= minimumFocusDistance)
+                yield break;
+            var elapsed = 0f;
+            duration = Mathf.Max(0.01f, duration);
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+                var position = Vector3.Lerp(start, target, t);
+                position.z = start.z;
+                transform.position = position;
+                ClampPosition();
+                yield return null;
+            }
+            transform.position = target;
+            ClampPosition();
+        }
+
+        public IEnumerator FocusOnPosition(Vector3 worldPosition, float duration = 0.45f)
+        {
+            if (controlledCamera == null)
+                yield break;
+
+            var start = transform.position;
+            var target = worldPosition;
+            target.y += focusVerticalOffset;
+            target.z = start.z;
+            if (Vector2.Distance(start, target) <= minimumFocusDistance)
+                yield break;
+            var elapsed = 0f;
+            duration = Mathf.Max(0.01f, duration);
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+                var position = Vector3.Lerp(start, target, t);
+                position.z = start.z;
+                transform.position = position;
+                ClampPosition();
+                yield return null;
+            }
+            transform.position = target;
+            ClampPosition();
+        }
+
+        public IEnumerator RestorePosition(Vector3 worldPosition, float duration = 0.35f)
+        {
+            if (controlledCamera == null)
+                yield break;
+
+            var start = transform.position;
+            var target = worldPosition;
+            target.z = start.z;
+            var elapsed = 0f;
+            duration = Mathf.Max(0.01f, duration);
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+                var position = Vector3.Lerp(start, target, t);
+                position.z = start.z;
+                transform.position = position;
+                ClampPosition();
+                yield return null;
+            }
+            transform.position = target;
+            ClampPosition();
+        }
 
         private void Update()
         {

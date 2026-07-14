@@ -63,6 +63,7 @@ namespace StellaStair.Battle
             if (dialogueDatabase == null)
                 dialogueDatabase = Resources.Load<TacticalDialogueDatabase>("TacticalDialogueDatabase");
             ApplyStagePresentation();
+            TacticalStageBackground.RefreshForCurrentStage();
         }
 
         private void Start()
@@ -111,7 +112,7 @@ namespace StellaStair.Battle
                 stageStartButton.onClick.RemoveListener(StartStageFromIntro);
                 stageStartButton.onClick.AddListener(StartStageFromIntro);
             }
-            stageCanvas.SetActive(true);
+            stageCanvas.SetActive(false);
         }
 
         private static GameObject FindStageCanvas()
@@ -201,7 +202,7 @@ namespace StellaStair.Battle
                 return;
             }
 
-            stageCanvas.SetActive(true);
+            stageCanvas.SetActive(false);
             SetIntroElementVisible(stageNameLabel, false);
             SetIntroElementVisible(stageDescriptionLabel, false);
             if (stageStartButton != null)
@@ -223,6 +224,29 @@ namespace StellaStair.Battle
                 stageCanvas.SetActive(false);
             if (battle != null && battle.Phase == BattlePhase.Deployment)
                 battle.StartBattle();
+        }
+
+        private IEnumerator FocusDeploymentZoneRoutine()
+        {
+            if (board == null)
+                yield break;
+
+            var cells = new List<GridPosition>(board.GetPlayerDeploymentCells());
+            if (cells.Count == 0)
+                yield break;
+
+            var center = Vector3.zero;
+            foreach (var cell in cells)
+                center += board.PositionToStandingWorld(cell);
+            center /= cells.Count;
+
+            var camera = Camera.main ?? FindAnyObjectByType<Camera>();
+            if (camera == null)
+                yield break;
+            var pan = camera.GetComponent<TacticalCameraPan>();
+            if (pan == null)
+                pan = camera.gameObject.AddComponent<TacticalCameraPan>();
+            yield return pan.FocusOnPosition(center);
         }
 
         private static bool IsStageRootName(string value)
@@ -277,6 +301,13 @@ namespace StellaStair.Battle
         {
             beforeBattleDialoguePlayed = true;
             yield return PlayStageDialogueRoutine(TacticalDialogueTiming.BeforeBattle);
+            if (battle == null || battle.Phase != BattlePhase.Deployment)
+                yield break;
+
+            battle.PushInteractionLock();
+            yield return FocusDeploymentZoneRoutine();
+            battle.PopInteractionLock();
+            battle.StartBattle();
         }
 
         private void OnPlayerTurnStarted(int turnNumber)

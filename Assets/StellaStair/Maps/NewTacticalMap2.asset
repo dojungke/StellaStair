@@ -15,85 +15,85 @@ MonoBehaviour:
   walkable:
   - position: {x: -18, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -17, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -16, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -15, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -14, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -13, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -12, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -11, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -10, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -9, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -8, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -7, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -6, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -5, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -4, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -3, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -2, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: -1, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 0, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 1, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 2, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 3, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 4, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 5, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 6, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 7, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 8, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   playerDeployment:
   - position: {x: -7, y: 0, z: 0}
     tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
@@ -116,10 +116,10 @@ MonoBehaviour:
   bombCrates:
   - position: {x: -12, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 4ca4fc51fcfac2141b9dea3a41e0fd27, type: 2}
-    color: {r: 0.9, g: 0.12, b: 0.05, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 1, y: 1, z: 0}
     tile: {fileID: 11400000, guid: 4ca4fc51fcfac2141b9dea3a41e0fd27, type: 2}
-    color: {r: 0.9, g: 0.12, b: 0.05, a: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
   objectiveTargets: []
   defenseObjectives: []
   enemyGuardSpawns:
@@ -135,6 +135,8 @@ MonoBehaviour:
     color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
   mapName: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
   mapDescription: "test2\n\uBCF4\uC0C1: \uBCC4\n-\uBCC4\uC0AC\uB2E4\uB9AC"
+  backgroundSprite: {fileID: 21300000, guid: 8d70f7c15ef54c34b2959d45518d11f7, type: 3}
+  backgroundTint: {r: 1, g: 1, b: 1, a: 1}
   uiElements: []
   rounds: []
   stageType: 0

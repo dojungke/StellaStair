@@ -45,7 +45,7 @@ namespace StellaStair.Editor
 
             var attackButton = FindButtonByName(candidates, "Attack Button") ?? candidates[0];
             var attackChangeButton = FindButtonByName(
-                candidates, "Attack change Button", "Attack Change Button", "AttackChangeButton");
+                candidates, "Attack change Button", "Attack Change Button", "AttackChangeButton", "Change Button (1)", "Change Button");
             var cancelButton = FindButtonByName(
                 candidates, "Cancel Button", "Move Undo Button", "Move Reset Button");
             var turnButton = FindButtonByName(candidates, "Turn Button");

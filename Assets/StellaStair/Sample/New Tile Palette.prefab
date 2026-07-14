@@ -188,19 +188,19 @@ Tilemap:
   m_TileColorArray:
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {r: 0.22, g: 0.25, b: 0.31, a: 1}
+    m_Data: {r: 1, g: 1, b: 1, a: 1}
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {r: 0.72, g: 0.46, b: 0.18, a: 0.9}
+    m_Data: {r: 1, g: 1, b: 1, a: 1}
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    m_Data: {r: 1, g: 1, b: 1, a: 1}
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {r: 0.62, g: 0.34, b: 0.14, a: 1}
+    m_Data: {r: 1, g: 1, b: 1, a: 1}
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {r: 0.9, g: 0.12, b: 0.05, a: 1}
+    m_Data: {r: 1, g: 1, b: 1, a: 1}
   - serializedVersion: 2
     m_RefCount: 1
     m_Data: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}

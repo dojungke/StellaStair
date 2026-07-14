@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -157,6 +158,7 @@ namespace StellaStair.Editor
                 {
                     stageKey = stageKey,
                     timing = timing,
+                    duration = ParseFloat(Get(row, header, "duration"), 2.2f),
                     order = order,
                     speakerName = Get(row, header, "speaker"),
                     skillKey = Get(row, header, "skillkey"),
@@ -204,6 +206,13 @@ namespace StellaStair.Editor
                 "dark" or "shadow" or "dim" or "\uC5B4\uB450\uC6C0" => TacticalDialoguePortraitMode.Dark,
                 _ => TacticalDialoguePortraitMode.Empty
             };
+        }
+
+        private static float ParseFloat(string value, float fallback)
+        {
+            return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
+                ? Mathf.Max(0.1f, result)
+                : fallback;
         }
 
         private static int ParseInt(string value, int fallback)

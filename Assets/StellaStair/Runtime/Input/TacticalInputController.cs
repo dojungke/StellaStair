@@ -45,12 +45,17 @@ namespace StellaStair.Input
         private TacticalUnit facingPreviewUnit;
         private int facingPreviewOriginalDirection;
         private DeploymentManager subscribedDeployment;
+        private TacticalCameraPan cameraPan;
+        private Coroutine cameraFocusRoutine;
+        private Vector3 cameraPositionBeforeSelection;
+        private bool hasCameraPositionBeforeSelection;
 
         public bool IsAttackMode { get; private set; }
         public bool CanUseAttackButton => deployment != null &&
             !deployment.InteractionLocked &&
             deployment.Phase == BattlePhase.PlayerTurn && selected != null &&
             selected.Team == UnitTeam.Player && selected.IsAlive &&
+            selected.CanUseCurrentAttackMode &&
             !selected.IsMoving && !selected.HasAttacked;
 
         public void Configure(Camera camera, DeploymentManager manager, GridHighlighter gridHighlighter)
@@ -108,6 +113,8 @@ namespace StellaStair.Input
                 worldCamera = Camera.main;
             if (worldCamera != null && worldCamera.GetComponent<TacticalCameraPan>() == null)
                 worldCamera.gameObject.AddComponent<TacticalCameraPan>();
+            if (worldCamera != null)
+                cameraPan = worldCamera.GetComponent<TacticalCameraPan>();
             if (deployment == null)
                 deployment = FindAnyObjectByType<DeploymentManager>();
             if (highlighter == null)
@@ -151,13 +158,13 @@ namespace StellaStair.Input
             attackButton ??= rightmost;
             moveUndoButton ??= secondRightmost;
             turnButton ??= leftmost;
-            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton");
+            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton", "Change Button (1)", "Change Button");
         }
 
         private void BindNamedSceneButtons()
         {
             attackButton ??= FindSceneButtonByName("Attack Button");
-            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton");
+            attackChangeButton ??= FindSceneButtonByName("Attack change Button", "Attack Change Button", "AttackChangeButton", "Change Button (1)", "Change Button");
             moveUndoButton ??= FindSceneButtonByName("Cancel Button", "Move Undo Button", "Move Reset Button");
             turnButton ??= FindSceneButtonByName("Turn Button");
         }
@@ -191,7 +198,9 @@ namespace StellaStair.Input
             return button != null &&
                    (button.name == "Attack change Button" ||
                     button.name == "Attack Change Button" ||
-                    button.name == "AttackChangeButton");
+                    button.name == "AttackChangeButton" ||
+                    button.name == "Change Button (1)" ||
+                    button.name == "Change Button");
         }
         private static bool IsLevelUpUiButton(Button button)
         {
@@ -599,6 +608,49 @@ namespace StellaStair.Input
             }
         }
 
+        private void FocusCameraOnUnit(TacticalUnit unit)
+        {
+            if (unit == null || worldCamera == null)
+                return;
+            cameraPan ??= worldCamera.GetComponent<TacticalCameraPan>();
+            if (cameraPan == null)
+                return;
+            if (!hasCameraPositionBeforeSelection)
+            {
+                cameraPositionBeforeSelection = worldCamera.transform.position;
+                hasCameraPositionBeforeSelection = true;
+            }
+            if (cameraFocusRoutine != null)
+                StopCoroutine(cameraFocusRoutine);
+            cameraFocusRoutine = unit.IsPlaced
+                ? StartCoroutine(cameraPan.FocusOn(unit))
+                : StartCoroutine(cameraPan.FocusOnPosition(unit.transform.position));
+        }
+
+        private void FocusCameraOnMoveDestination(GridPosition destination)
+        {
+            if (selected == null || worldCamera == null)
+                return;
+            cameraPan ??= worldCamera.GetComponent<TacticalCameraPan>();
+            if (cameraPan == null)
+                return;
+            if (cameraFocusRoutine != null)
+                StopCoroutine(cameraFocusRoutine);
+            cameraFocusRoutine = StartCoroutine(cameraPan.FocusOnPosition(selected.GetPreviewStandingWorldPosition(destination)));
+        }
+
+        private void RestoreCameraAfterSelection()
+        {
+            if (!hasCameraPositionBeforeSelection)
+                return;
+            if (cameraFocusRoutine != null)
+                StopCoroutine(cameraFocusRoutine);
+            cameraPan ??= worldCamera != null ? worldCamera.GetComponent<TacticalCameraPan>() : null;
+            if (cameraPan != null)
+                cameraFocusRoutine = StartCoroutine(cameraPan.RestorePosition(cameraPositionBeforeSelection));
+            hasCameraPositionBeforeSelection = false;
+        }
+
         private void Select(TacticalUnit unit)
         {
             if (deployment.InteractionLocked)
@@ -742,7 +794,12 @@ namespace StellaStair.Input
                 : GridPathfinder.FindReachable(
                     deployment.Board, selected.Position, selected.RemainingMovement, selected);
             attackablePositions.Clear();
-            if (!selected.HasAttacked)
+            if (IsAttackMode && !selected.CanUseCurrentAttackMode)
+            {
+                highlighter.Clear();
+                return;
+            }
+            if (!selected.HasAttacked && selected.CanUseCurrentAttackMode)
             {
                 foreach (var position in selected.GetAttackTargetPositions(selected.Position))
                 {

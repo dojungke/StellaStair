@@ -1,4 +1,4 @@
-StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,RightCharacter,RightPortrait,SkillKey
+StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,RightCharacter,RightPortrait,SkillKey,Duration
 [이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,이리,Dark,
 [이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,이리,Normal,
 [별] 테스트 2,BeforeBattle,3,이리,2234,마법사,Dark,이리,Normal,

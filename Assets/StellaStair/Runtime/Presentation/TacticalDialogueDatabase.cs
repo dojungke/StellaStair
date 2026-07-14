@@ -38,6 +38,7 @@ namespace StellaStair.Presentation
         {
             public string stageKey = string.Empty;
             public TacticalDialogueTiming timing = TacticalDialogueTiming.BeforeBattle;
+            [Min(0.1f)] public float duration = 2.2f;
             [Min(0)] public int order;
             public string speakerName = string.Empty;
             public string skillKey = string.Empty;

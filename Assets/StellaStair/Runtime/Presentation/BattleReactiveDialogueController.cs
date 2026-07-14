@@ -1,3 +1,5 @@
+using System.Collections;
+using StellaStair.Grid;
 using StellaStair.Battle;
 using StellaStair.Units;
 using UnityEngine;
@@ -11,11 +13,15 @@ namespace StellaStair.Presentation
         [SerializeField] private BattleSpeechBubblePresenter speechBubblePresenter;
         [SerializeField, Min(0.5f)] private float bubbleDuration = 2.2f;
         [SerializeField, Min(0f)] private float sameSpeakerCooldown = 0.35f;
+        [SerializeField, Min(0.01f)] private float focusDuration = 0.35f;
+
+        private bool dialogueSequenceBusy;
 
         private DeploymentManager deployment;
         private StageProgression stageProgression;
         private TacticalUnit lastSpeaker;
         private float lastSpeakTime = -999f;
+        private float lastDialogueDuration = 2.2f;
 
         public void Configure(DeploymentManager manager)
         {
@@ -27,9 +33,9 @@ namespace StellaStair.Presentation
             if (deployment != null)
             {
                 deployment.EnemyKilled += OnEnemyKilled;
-                deployment.LevelUpUpgradeSelected += OnLevelUpUpgradeSelected;
+                deployment.BeforeLevelUp += OnBeforeLevelUp;
                 deployment.UnitHealed += OnUnitHealed;
-                deployment.SkillUsed += OnSkillUsed;
+                deployment.BeforeAttack += OnBeforeAttack;
             }
         }
 
@@ -44,9 +50,9 @@ namespace StellaStair.Presentation
                 return;
 
             deployment.EnemyKilled -= OnEnemyKilled;
-            deployment.LevelUpUpgradeSelected -= OnLevelUpUpgradeSelected;
+            deployment.BeforeLevelUp -= OnBeforeLevelUp;
             deployment.UnitHealed -= OnUnitHealed;
-            deployment.SkillUsed -= OnSkillUsed;
+            deployment.BeforeAttack -= OnBeforeAttack;
             deployment = null;
         }
 
@@ -54,20 +60,31 @@ namespace StellaStair.Presentation
         {
             if (killer == null || killer.Team != UnitTeam.Player)
                 return;
-            Speak(killer, TacticalDialogueTiming.EnemyKilled, skillKey);
+            StartCoroutine(SpeakAfterAttackRoutine(killer, skillKey));
         }
 
-        private void OnLevelUpUpgradeSelected(TacticalUnit unit)
+        private IEnumerator SpeakAfterAttackRoutine(TacticalUnit killer, string skillKey)
         {
-            Speak(unit, TacticalDialogueTiming.LevelUp);
+            while (killer != null && killer.IsAttacking)
+                yield return null;
+            yield return PlayDialogueSequence(killer, TacticalDialogueTiming.EnemyKilled, skillKey, false);
         }
 
-        private void OnSkillUsed(TacticalUnit unit, string skillKey)
+        private IEnumerator OnBeforeAttack(TacticalUnit attacker, string skillKey, GridPosition targetPosition)
         {
-            if (unit == null || unit.Team != UnitTeam.Player || string.IsNullOrWhiteSpace(skillKey))
-                return;
+            if (attacker == null || attacker.Team != UnitTeam.Player ||
+                string.IsNullOrWhiteSpace(skillKey))
+                yield break;
+            yield return PlayDialogueSequence(attacker, TacticalDialogueTiming.SkillUsed, skillKey, false);
+        }
 
-            Speak(unit, TacticalDialogueTiming.SkillUsed, skillKey);
+        private IEnumerator OnBeforeLevelUp(TacticalUnit unit)
+        {
+            if (unit == null || unit.Team != UnitTeam.Player)
+                yield break;
+            while (unit.IsAttacking)
+                yield return null;
+            yield return PlayDialogueSequence(unit, TacticalDialogueTiming.LevelUp, null, true);
         }
 
         private void OnUnitHealed(TacticalUnit target, TacticalUnit source, int amount)
@@ -76,31 +93,64 @@ namespace StellaStair.Presentation
                 return;
             if (source == null || source.Team != UnitTeam.Player || source == target)
                 return;
-
-            Speak(source, TacticalDialogueTiming.AllyHealed);
+            StartCoroutine(PlayDialogueSequence(source, TacticalDialogueTiming.AllyHealed, null, false));
         }
 
-        private void Speak(TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey = null)
+        private IEnumerator PlayDialogueSequence(TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey, bool focus)
+        {
+            while (dialogueSequenceBusy)
+                yield return null;
+
+            dialogueSequenceBusy = true;
+            try
+            {
+                if (focus)
+                    yield return FocusOnUnitRoutine(speaker);
+                if (Speak(speaker, timing, skillKey))
+                    yield return new WaitForSecondsRealtime(lastDialogueDuration);
+            }
+            finally
+            {
+                dialogueSequenceBusy = false;
+            }
+        }
+
+        private IEnumerator FocusOnUnitRoutine(TacticalUnit unit)
+        {
+            if (unit == null)
+                yield break;
+            var camera = Camera.main ?? FindAnyObjectByType<Camera>();
+            if (camera == null)
+                yield break;
+            var pan = camera.GetComponent<TacticalCameraPan>();
+            if (pan == null)
+                pan = camera.gameObject.AddComponent<TacticalCameraPan>();
+            yield return pan.FocusOn(unit, focusDuration);
+        }
+
+        private bool Speak(TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey = null)
         {
             if (speaker == null || !speaker.IsAlive)
-                return;
+                return false;
             if (lastSpeaker == speaker && Time.time - lastSpeakTime < sameSpeakerCooldown)
-                return;
+                return false;
 
             EnsureDependencies();
             var stage = stageProgression != null ? stageProgression.CurrentStage : null;
             var line = dialogueDatabase != null
                 ? dialogueDatabase.GetRandomLine(stage, timing, GetSpeakerKey(speaker), skillKey, timing == TacticalDialogueTiming.SkillUsed, true)
                 : null;
+            lastDialogueDuration = line != null && line.duration > 0f ? line.duration : bubbleDuration;
             var text = line != null && !string.IsNullOrWhiteSpace(line.text)
                 ? line.text
                 : GetFallbackText(timing);
             if (string.IsNullOrWhiteSpace(text))
-                return;
+                return false;
 
-            speechBubblePresenter?.Show(speaker, text, bubbleDuration);
+            speechBubblePresenter?.Show(speaker, text, lastDialogueDuration);
             lastSpeaker = speaker;
             lastSpeakTime = Time.time;
+            return true;
         }
 
         private void EnsureDependencies()

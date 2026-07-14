@@ -22,6 +22,7 @@ MonoBehaviour:
   lines:
   - stageKey: '*'
     timing: 0
+    duration: 2.2
     order: 1
     speakerName: "\uC774\uB9AC"
     skillKey: 
@@ -32,6 +33,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 2
+    duration: 2.2
     order: 1
     speakerName: Guide
     skillKey: 
@@ -42,6 +44,7 @@ MonoBehaviour:
     rightPortrait: 1
   - stageKey: '*'
     timing: 3
+    duration: 2.2
     order: 1
     speakerName: Wizard
     skillKey: 
@@ -52,6 +55,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 3
+    duration: 2.2
     order: 2
     speakerName: Knight
     skillKey: 
@@ -62,6 +66,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 3
+    duration: 2.2
     order: 3
     speakerName: Wizard
     skillKey: Fireball
@@ -72,6 +77,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 3
+    duration: 2.2
     order: 4
     speakerName: Wizard
     skillKey: IceSpike
@@ -82,6 +88,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 4
+    duration: 2.2
     order: 1
     speakerName: Wizard
     skillKey: 
@@ -92,6 +99,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 4
+    duration: 2.2
     order: 2
     speakerName: Knight
     skillKey: 
@@ -102,6 +110,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 5
+    duration: 2.2
     order: 1
     speakerName: Wizard
     skillKey: 
@@ -112,6 +121,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 5
+    duration: 2.2
     order: 2
     speakerName: Knight
     skillKey: 
@@ -122,6 +132,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 6
+    duration: 2.2
     order: 1
     speakerName: Wizard
     skillKey: Fireball
@@ -132,6 +143,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 6
+    duration: 2.2
     order: 2
     speakerName: Wizard
     skillKey: IceSpike
@@ -142,6 +154,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: '*'
     timing: 6
+    duration: 2.2
     order: 3
     speakerName: Wizard
     skillKey: NatureFragrance
@@ -152,6 +165,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
     timing: 0
+    duration: 2.2
     order: 3
     speakerName: "\uC774\uB9AC"
     skillKey: 
@@ -162,6 +176,7 @@ MonoBehaviour:
     rightPortrait: 1
   - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
     timing: 0
+    duration: 2.2
     order: 4
     speakerName: "\uC774\uB9AC"
     skillKey: 
@@ -173,6 +188,7 @@ MonoBehaviour:
     rightPortrait: 1
   - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
     timing: 0
+    duration: 2.2
     order: 1
     speakerName: "\uAE30\uC0AC"
     skillKey: 
@@ -183,6 +199,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
     timing: 0
+    duration: 2.2
     order: 2
     speakerName: "\uAE30\uC0AC"
     skillKey: 
@@ -194,6 +211,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
     timing: 1
+    duration: 2.2
     order: 1
     speakerName: "\uAE30\uC0AC"
     skillKey: 
@@ -204,6 +222,7 @@ MonoBehaviour:
     rightPortrait: 0
   - stageKey: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
     timing: 0
+    duration: 2.2
     order: 1
     speakerName: "\uB9C8\uBC95\uC0AC"
     skillKey: 
@@ -214,6 +233,7 @@ MonoBehaviour:
     rightPortrait: 2
   - stageKey: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
     timing: 0
+    duration: 2.2
     order: 2
     speakerName: "\uC774\uB9AC"
     skillKey: 

@@ -440,7 +440,7 @@ namespace StellaStair.Grid
         }
 
         public void Detonate(
-            GridPosition center, TacticalUnit source, int damage)
+            GridPosition center, TacticalUnit source, int damage, TacticalUnit damageCredit = null)
         {
             damage = Mathf.Max(1, damage);
             var targets = new List<TacticalUnit>();
@@ -456,7 +456,7 @@ namespace StellaStair.Grid
             StartCoroutine(ExplosionVisualRoutine(center));
             foreach (var target in targets)
                 if (target != null && target.IsAlive)
-                    target.TakeDamage(damage, source);
+                    target.TakeDamage(damage, damageCredit ?? source);
 
             for (var x = center.X - 1; x <= center.X + 1; x++)
                 for (var y = center.Y - 1; y <= center.Y + 1; y++)

@@ -63,6 +63,7 @@ namespace StellaStair.Units
         [SerializeField] private bool arcaneAccelerationReady;
         [SerializeField] private bool arcaneAccelerationConsumedThisTurn;
         private string currentDamageSkillKey = string.Empty;
+        private string lastAttackSkillKey = string.Empty;
         [SerializeField] private AttackDistanceRule fallbackAttackDistanceRule = AttackDistanceRule.Any;
         [SerializeField, Min(0)] private int fallbackMinimumAttackRange = 0;
         [SerializeField, Min(1)] private int fallbackAttackRange = 1;
@@ -164,8 +165,15 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
         public int NatureFragranceHealAmount => hasNatureFragranceAttack ? 1 + natureFragranceHealBonus : 0;
         public int NatureFragranceCooldown => Mathf.Max(1, 2 - natureFragranceCooldownReduction);
         public bool HasMultipleAttackModes => GetAvailableAttackModeCount() > 1;
+        public TacticalAttackMode SelectedAttackMode =>
+            IsAttackModeUnlocked(currentAttackMode) ? currentAttackMode : TacticalAttackMode.Default;
         public TacticalAttackMode CurrentAttackMode => IsAttackModeAvailable(currentAttackMode) ? currentAttackMode : TacticalAttackMode.Default;
-        public string CurrentAttackName => GetAttackName(CurrentAttackMode);
+        public bool IsCurrentAttackModeOnCooldown =>
+            IsAttackModeOnCooldown(SelectedAttackMode);
+        public bool CanUseCurrentAttackMode => !IsCurrentAttackModeOnCooldown;
+        public string CurrentAttackName => IsCurrentAttackModeOnCooldown
+            ? $"{GetAttackName(SelectedAttackMode)} (\uCFE8\uD0C0\uC784 \uC911)"
+            : GetAttackName(SelectedAttackMode);
         public bool HasCustomCurrentAttackModeEffectOffsets => HasCurrentAttackModeEffectOffsets(out _);
         public bool HasCustomAttackTargetOffsets => definition != null && definition.HasCustomAttackTargetOffsets;
         public bool HasCustomAttackEffectOffsets => definition != null && definition.HasCustomAttackEffectOffsets;
@@ -184,6 +192,7 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
         public event Action<TacticalUnit, int, int> HealthChanged;
         public event Action<TacticalUnit, TacticalUnit, int> Healed;
         public event Action<TacticalUnit, string> AttackUsed;
+        public event Func<TacticalUnit, string, GridPosition, IEnumerator> BeforeAttack;
         public event Action<TacticalUnit, int, int> ExperienceChanged;
         public event Action<TacticalUnit, int> LeveledUp;
         public event Action<TacticalUnit> Died;
@@ -1484,7 +1493,7 @@ ThrustHasKnockback = thrustHasKnockback,
             }
 
             var modes = GetAvailableAttackModes();
-            var currentIndex = modes.IndexOf(CurrentAttackMode);
+            var currentIndex = modes.IndexOf(SelectedAttackMode);
             currentAttackMode = modes[(currentIndex + 1) % modes.Count];
             return true;
         }
@@ -1496,13 +1505,32 @@ ThrustHasKnockback = thrustHasKnockback,
             if (hasPiercingArrowAttack) modes.Add(TacticalAttackMode.PiercingArrow);
             if (hasBowStrikeAttack) modes.Add(TacticalAttackMode.BowStrike);
             if (hasHarpoonAttack) modes.Add(TacticalAttackMode.Harpoon);
-            if (hasFireballAttack && fireballCooldownRemaining <= 0) modes.Add(TacticalAttackMode.Fireball);
-            if (hasIceSpikeAttack && iceSpikeCooldownRemaining <= 0) modes.Add(TacticalAttackMode.IceSpike);
-            if (hasNatureFragranceAttack && natureFragranceCooldownRemaining <= 0) modes.Add(TacticalAttackMode.NatureFragrance);
+            if (hasFireballAttack) modes.Add(TacticalAttackMode.Fireball);
+            if (hasIceSpikeAttack) modes.Add(TacticalAttackMode.IceSpike);
+            if (hasNatureFragranceAttack) modes.Add(TacticalAttackMode.NatureFragrance);
             return modes;
         }
 
         private int GetAvailableAttackModeCount() => GetAvailableAttackModes().Count;
+
+        private bool IsAttackModeUnlocked(TacticalAttackMode mode)
+        {
+            return mode == TacticalAttackMode.Default ||
+                   mode == TacticalAttackMode.Thrust && hasThrustAttack ||
+                   mode == TacticalAttackMode.PiercingArrow && hasPiercingArrowAttack ||
+                   mode == TacticalAttackMode.BowStrike && hasBowStrikeAttack ||
+                   mode == TacticalAttackMode.Harpoon && hasHarpoonAttack ||
+                   mode == TacticalAttackMode.Fireball && hasFireballAttack ||
+                   mode == TacticalAttackMode.IceSpike && hasIceSpikeAttack ||
+                   mode == TacticalAttackMode.NatureFragrance && hasNatureFragranceAttack;
+        }
+
+        private bool IsAttackModeOnCooldown(TacticalAttackMode mode)
+        {
+            return mode == TacticalAttackMode.Fireball && fireballCooldownRemaining > 0 ||
+                   mode == TacticalAttackMode.IceSpike && iceSpikeCooldownRemaining > 0 ||
+                   mode == TacticalAttackMode.NatureFragrance && natureFragranceCooldownRemaining > 0;
+        }
 
         private bool IsAttackModeAvailable(TacticalAttackMode mode)
         {
@@ -1738,9 +1766,11 @@ ThrustHasKnockback = thrustHasKnockback,
                 TurnStartPosition = Position;
         }
 
+        private const string BasicAttackSkillKey = "BasicAttack";
+
         private static string GetSkillKey(TacticalAttackMode attackMode)
         {
-            return attackMode == TacticalAttackMode.Default ? string.Empty : attackMode.ToString();
+            return attackMode == TacticalAttackMode.Default ? BasicAttackSkillKey : attackMode.ToString();
         }
         private void NotifyAttackUsed(TacticalAttackMode attackMode)
         {
@@ -1997,7 +2027,6 @@ ThrustHasKnockback = thrustHasKnockback,
 
             var attackMode = CurrentAttackMode;
             StartAttackCooldown(attackMode);
-            NotifyAttackUsed(attackMode);
             ConsumeAttackAction();
             if (targetPosition.X != Position.X)
                 SetFacingDirection(targetPosition.X > Position.X ? 1 : -1);
@@ -2016,7 +2045,6 @@ ThrustHasKnockback = thrustHasKnockback,
 
             var attackMode = CurrentAttackMode;
             StartAttackCooldown(attackMode);
-            NotifyAttackUsed(attackMode);
             ConsumeAttackAction();
             if (targetPosition.X != Position.X)
                 SetFacingDirection(targetPosition.X > Position.X ? 1 : -1);
@@ -2053,7 +2081,9 @@ if (hasAgilityPassive && agilityShieldAvailable)
             if (source != null && source != this)
             {
                 LastDamageSource = source;
-                LastDamageSkillKey = source.currentDamageSkillKey ?? string.Empty;
+                LastDamageSkillKey = !string.IsNullOrWhiteSpace(source.currentDamageSkillKey)
+                    ? source.currentDamageSkillKey
+                    : source.lastAttackSkillKey ?? string.Empty;
             }
             unitAnimator?.PlayHit();
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
@@ -2068,7 +2098,7 @@ if (hasAgilityPassive && agilityShieldAvailable)
             if (board != null)
                 board.RemoveOccupancy(this);
             if (isExplosiveCrate && board != null)
-                board.Detonate(deathPosition, this, explosionDamage);
+                board.Detonate(deathPosition, this, explosionDamage, source);
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
@@ -2452,6 +2482,7 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             IsAttacking = true;
             var previousDamageSkillKey = currentDamageSkillKey;
             currentDamageSkillKey = GetSkillKey(attackMode);
+            lastAttackSkillKey = currentDamageSkillKey;
             var attackStartPosition = Position;
             var origin = transform.position;
             var direction = targetPosition.X == Position.X
@@ -2459,6 +2490,10 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 : targetPosition.X > Position.X ? 1 : -1;
             var lunge = origin + Vector3.right * (0.18f * direction);
             SetFacingDirection(direction);
+            var beforeAttack = BeforeAttack?.Invoke(this, GetSkillKey(attackMode), targetPosition);
+            if (beforeAttack != null)
+                yield return beforeAttack;
+            NotifyAttackUsed(attackMode);
             unitAnimator?.PlayAttack();
 
             yield return MoveTransform(origin, lunge, 0.1f);
