@@ -107,25 +107,40 @@ namespace StellaStair.Editor
 
         private static string MergeCsvTexts(params string[] csvTexts)
         {
-            var mergedRows = new List<List<string>>();
-            var hasHeader = false;
+            var canonicalHeader = new List<string>
+            {
+                "StageKey", "Timing", "Order", "Speaker", "Text",
+                "LeftCharacter", "LeftPortrait", "LeftDirection", "RightCharacter", "RightPortrait", "RightDirection",
+                "SkillKey", "Duration"
+            };
+            var mergedRows = new List<List<string>> { canonicalHeader };
 
             foreach (var csvText in csvTexts)
             {
                 var rows = ReadCsvText(csvText);
-                if (rows.Count == 0)
+                if (rows.Count <= 1)
                     continue;
 
-                if (!hasHeader)
-                {
-                    mergedRows.Add(rows[0]);
-                    hasHeader = true;
-                }
+                var header = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (var column = 0; column < rows[0].Count; column++)
+                    header[NormalizeHeader(rows[0][column])] = column;
 
-                for (var i = 1; i < rows.Count; i++)
+                for (var rowIndex = 1; rowIndex < rows.Count; rowIndex++)
                 {
-                    if (!IsEmptyRow(rows[i]))
-                        mergedRows.Add(rows[i]);
+                    var row = rows[rowIndex];
+                    if (IsEmptyRow(row))
+                        continue;
+
+                    var normalizedRow = new List<string>(canonicalHeader.Count);
+                    foreach (var columnName in canonicalHeader)
+                    {
+                        if (header.TryGetValue(NormalizeHeader(columnName), out var columnIndex) &&
+                            columnIndex < row.Count)
+                            normalizedRow.Add(row[columnIndex]);
+                        else
+                            normalizedRow.Add(string.Empty);
+                    }
+                    mergedRows.Add(normalizedRow);
                 }
             }
 
@@ -139,7 +154,6 @@ namespace StellaStair.Editor
                 return result;
 
             var header = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var usedOrders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < rows[0].Count; i++)
                 header[NormalizeHeader(rows[0][i])] = i;
 
@@ -151,8 +165,7 @@ namespace StellaStair.Editor
 
                 var stageKey = Get(row, header, "stagekey");
                 var timing = ParseTiming(Get(row, header, "timing"));
-                var order = ResolveUniqueOrder(
-                    usedOrders, stageKey, timing, ParseInt(Get(row, header, "order"), result.Count + 1));
+                var order = ParseInt(Get(row, header, "order"), result.Count + 1);
 
                 result.Add(new TacticalDialogueDatabase.Line
                 {
@@ -165,22 +178,16 @@ namespace StellaStair.Editor
                     text = NormalizeText(Get(row, header, "text")),
                     leftCharacterId = Get(row, header, "leftcharacter"),
                     leftPortrait = ParsePortrait(Get(row, header, "leftportrait")),
+                    leftDirection = ParseDirection(Get(row, header, "leftdirection")),
                     rightCharacterId = Get(row, header, "rightcharacter"),
-                    rightPortrait = ParsePortrait(Get(row, header, "rightportrait"))
+                    rightPortrait = ParsePortrait(Get(row, header, "rightportrait")),
+                    rightDirection = ParseDirection(Get(row, header, "rightdirection"))
                 });
             }
 
             return result;
         }
 
-        private static int ResolveUniqueOrder(HashSet<string> usedOrders, string stageKey, TacticalDialogueTiming timing, int preferredOrder)
-        {
-            var order = Math.Max(1, preferredOrder);
-            var prefix = $"{stageKey}|{timing}|";
-            while (!usedOrders.Add(prefix + order))
-                order++;
-            return order;
-        }
         private static TacticalDialogueTiming ParseTiming(string value)
         {
             var normalized = NormalizeHeader(value);
@@ -197,6 +204,15 @@ namespace StellaStair.Editor
             };
         }
 
+        private static TacticalDialoguePortraitDirection ParseDirection(string value)
+        {
+            var normalized = NormalizeHeader(value);
+            return normalized switch
+            {
+                "flip" or "flipped" or "reverse" or "mirrored" or "반전" => TacticalDialoguePortraitDirection.Flipped,
+                _ => TacticalDialoguePortraitDirection.Default
+            };
+        }
         private static TacticalDialoguePortraitMode ParsePortrait(string value)
         {
             var normalized = NormalizeHeader(value);

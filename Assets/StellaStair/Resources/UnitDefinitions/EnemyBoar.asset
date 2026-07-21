@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf5bfe9903dd5aa469c63830ecd4b9fe, type: 3}
+  m_Name: EnemyBoar
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
+  <DisplayName>k__BackingField: Boar
+  <Description>k__BackingField: "\uC808\uB9DD\uC758 \uC778\uB3C4\uC790"
+  <MovementPoints>k__BackingField: 6
+  <MoveSpeed>k__BackingField: 5
+  <MaxHealth>k__BackingField: 4
+  <AttackDamage>k__BackingField: 1
+  <AttackDistanceRule>k__BackingField: 0
+  <MinimumAttackRange>k__BackingField: 0
+  <AttackRange>k__BackingField: 1
+  <VerticalAttackRange>k__BackingField: 1
+  <KnockbackDistance>k__BackingField: 1
+  <CanPierceUnits>k__BackingField: 1
+  <AreaKnockbackRadius>k__BackingField: 0
+  <AreaKnockbackDistance>k__BackingField: 0
+  attackTargetOffsets: []
+  attackEffectOffsets: []
+  attackModeRanges: []
+  <UnitSprite>k__BackingField: {fileID: -5565481537080689747, guid: 171c9e0e8de2dc249aec64b9e90c4163, type: 3}
+  <AnimationPrefab>k__BackingField: {fileID: 0}
+  <AnimationController>k__BackingField: {fileID: 0}
+  <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
+  <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}
+  <UnitWidthInCells>k__BackingField: 1.1
+  <UnitHeightInCells>k__BackingField: 1.1
+  <DefaultFacingDirection>k__BackingField: 1

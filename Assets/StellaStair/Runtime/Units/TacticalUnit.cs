@@ -15,6 +15,10 @@ namespace StellaStair.Units
         [SerializeField] private UnitTeam team;
         [SerializeField] private bool isCrate;
         [SerializeField] private bool isObjective;
+        [SerializeField] private string objectiveDisplayName;
+        [SerializeField] private Sprite objectSpriteOverride;
+        [SerializeField] private string objectFunctionDescription;
+        [SerializeField, TextArea(2, 4)] private string objectiveDescription;
         [SerializeField] private bool isExplosiveCrate;
         [SerializeField, Min(1)] private int crateMaxHealth = 2;
         [SerializeField, Min(1)] private int explosionDamage = 3;
@@ -103,6 +107,9 @@ namespace StellaStair.Units
         public UnitTeam Team => team;
         public bool IsCrate => isCrate;
         public bool IsObjective => isObjective;
+        public string ObjectiveDisplayName => objectiveDisplayName;
+        public string ObjectiveDescription => objectiveDescription;
+        public string ObjectFunctionDescription => objectFunctionDescription;
         public bool IsExplosiveCrate => isExplosiveCrate;
         public GridPosition Position { get; private set; }
         public GridPosition TurnStartPosition { get; private set; }
@@ -349,6 +356,8 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             isExplosiveCrate = false;
             EnsureBodyComponents();
             definition = unitDefinition;
+            currentLevel = unitDefinition != null ? Mathf.Max(1, unitDefinition.StartingLevel) : 1;
+            currentExperience = 0;
             team = unitTeam;
             if (!IsPlaced)
             {
@@ -654,6 +663,7 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
                 var visualDirection = FacingDirection * DefaultFacingDirection;
                 ghostAnimator?.SetFacing(visualDirection);
                 ApplyGhostAnimationLocalPosition(instance.transform);
+                ApplyGhostAnimationFacing(instance.transform, ghostAnimator, visualDirection);
                 ghostAnimator?.CaptureCurrentLocalPose();
                 ApplyGhostRendererStyle(ghostRoot, alpha, sortingOrderOverride);
                 DisableGhostPhysics(ghostRoot);
@@ -731,6 +741,18 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
                 fitScale *= GetUnitWorldSize().x / bounds.size.x;
             }
             instance.localScale = new Vector3(fitScale, fitScale, 1f);
+        }
+
+        private static void ApplyGhostAnimationFacing(
+            Transform instance, TacticalUnitAnimator animator, int visualDirection)
+        {
+            var facingRoot = animator != null ? animator.transform : instance;
+            if (facingRoot == null)
+                return;
+
+            var scale = facingRoot.localScale;
+            scale.x = Mathf.Abs(scale.x) * (visualDirection < 0 ? -1f : 1f);
+            facingRoot.localScale = scale;
         }
 
         private void ApplyGhostAnimationLocalPosition(Transform instance)
@@ -1156,64 +1178,64 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
                 return candidates;
 
             if (healthUpgradeCount < GetMaxHealthUpgradeCount())
-                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.MaxHealthPlusOne, "Max Health +1", "Increase max health and current health by 1."));
+                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.MaxHealthPlusOne, "최대 체력 +1", "최대 체력과 현재 체력이 1 증가합니다."));
             if (attackUpgradeCount < 2)
-                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.AttackDamagePlusOne, "Basic Attack Damage +1", "Increase basic attack damage by 1."));
+                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.AttackDamagePlusOne, "기본 공격 피해량 +1", "기본 공격 피해량이 1 증가합니다."));
             if (movementUpgradeCount < GetMaxMovementUpgradeCount())
-                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.MovementPlusOne, "Move Range +1", "Increase movement range by 1."));
+                candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.MovementPlusOne, "이동 범위 +1", "이동 범위가 1 증가합니다."));
 
             if (isKnight)
             {
                 if (!hasThrustAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockThrust, "Unlock Thrust", "Attack 2 horizontal cells for 1 damage each."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockThrust, "찌르기 해금", "가로 2칸을 각각 1 피해로 공격합니다."));
                 if (hasThrustAttack && thrustFrontDamageBonus < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustFrontDamagePlusOne, "Thrust Front Damage +1", "Increase first-cell thrust damage by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustFrontDamagePlusOne, "찌르기 첫 칸 피해량 +1", "찌르기 첫 칸의 피해량이 1 증가합니다."));
                 if (hasThrustAttack && thrustBackDamageBonus < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustBackDamagePlusOne, "Thrust Back Damage +1", "Increase second-cell thrust damage by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustBackDamagePlusOne, "찌르기 두 번째 칸 피해량 +1", "찌르기 두 번째 칸의 피해량이 1 증가합니다."));
                 if (hasThrustAttack && !thrustHasKnockback)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustKnockback, "Thrust Knockback", "Thrust pushes hit units by 1 cell."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ThrustKnockback, "찌르기 밀치기", "찌르기에 맞은 유닛을 1칸 밀칩니다."));
                 if (!hasGuardianPassive)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.GuardianPassive, "Passive: Guardian", "Enemies moving through nearby cells take 1 damage."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.GuardianPassive, "패시브: 수호", "주변 칸을 지나가는 적에게 1 피해를 줍니다."));
                 if (!hasCouragePassive)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.CouragePassive, "Passive: Courage", "Recover 1 health when killing an enemy."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.CouragePassive, "패시브: 용기", "적 처치 시 체력을 1 회복합니다."));
             }
             else if (isArcher)
             {
                 if (!hasPiercingArrowAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockPiercingArrow, "Piercing Arrow", "Attack a 5-cell line and damage every unit on the path for 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockPiercingArrow, "관통 화살", "5칸의 직선을 관통하며 경로의 모든 유닛에게 1 피해를 줍니다."));
                 if (hasPiercingArrowAttack && piercingArrowDamageBonus < 2)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.PiercingArrowDamagePlusOne, "Piercing Arrow Damage +1", "Increase piercing arrow damage by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.PiercingArrowDamagePlusOne, "관통 화살 피해량 +1", "관통 화살 피해량이 1 증가합니다."));
                 if (!hasBowStrikeAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockBowStrike, "Bow Strike", "Hit an adjacent enemy and push it 2 cells."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockBowStrike, "활격", "인접한 적을 공격하고 2칸 밀칩니다."));
                 if (hasBowStrikeAttack && bowStrikeDamageBonus < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.BowStrikeDamagePlusOne, "Bow Strike Damage +1", "Increase bow strike damage by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.BowStrikeDamagePlusOne, "활격 피해량 +1", "활격 피해량이 1 증가합니다."));
                 if (!hasHarpoonAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockHarpoon, "Harpoon", "Deal 1 damage and pull a horizontal target 1 cell."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockHarpoon, "작살", "1 피해를 주고 가로 방향의 대상을 1칸 끌어옵니다."));
                 if (!hasAgilityPassive)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.AgilityPassive, "Passive: Agility", "Gain one damage immunity charge at battle start."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.AgilityPassive, "패시브: 민첩", "전투 시작 시 피해 무효화 1회를 얻습니다."));
                 if (!hasCoverPassive)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.CoverPassive, "Passive: Cover Fire", "Once per turn, shoot an enemy for 1 before it attacks an ally in basic range."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.CoverPassive, "패시브: 엄호 사격", "턴마다 한 번, 기본 공격 범위의 아군을 공격하려는 적에게 먼저 1 피해를 줍니다."));
             }
             else if (isWizard)
             {
                 if (!hasFireballAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockFireball, "Fireball", "Deal fire damage in a 3x3 area. Cooldown 2 turns."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockFireball, "화염구", "3x3 범위에 1 피해를 줍니다. 재사용 대기시간 2턴."));
                 if (hasFireballAttack && fireballDamageBonus < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.FireballDamagePlusOne, "Fireball Damage +1", "Increase fireball damage by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.FireballDamagePlusOne, "화염구 피해량 +1", "화염구 피해량이 1 증가합니다."));
                 if (hasFireballAttack && fireballCooldownReduction < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.FireballCooldownMinusOne, "Fireball Cooldown -1", "Reduce fireball cooldown by 1 turn."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.FireballCooldownMinusOne, "화염구 재사용 대기시간 -1", "화염구 재사용 대기시간이 1턴 감소합니다."));
                 if (!hasIceSpikeAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockIceSpike, "Ice Spike", "Deal 1 damage to a unit, or create a 1 HP ice tile on empty ground. Cooldown 3 turns."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockIceSpike, "얼음 쐐기", "유닛에게 1 피해를 주거나 빈 지면에 체력 1의 얼음 상자를 생성합니다. 재사용 대기시간 3턴."));
                 if (hasIceSpikeAttack && iceSpikeCooldownReduction < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.IceSpikeCooldownMinusOne, "Ice Spike Cooldown -1", "Reduce ice spike cooldown by 1 turn."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.IceSpikeCooldownMinusOne, "얼음 쐐기 재사용 대기시간 -1", "얼음 쐐기 재사용 대기시간이 1턴 감소합니다."));
                 if (!hasNatureFragranceAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockNatureFragrance, "Nature Fragrance", "Heal a unit by 1. Cooldown 2 turns."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockNatureFragrance, "자연의 향기", "유닛의 체력을 1 회복합니다. 재사용 대기시간 2턴."));
                 if (hasNatureFragranceAttack && natureFragranceCooldownReduction < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.NatureFragranceCooldownMinusOne, "Nature Fragrance Cooldown -1", "Reduce nature fragrance cooldown by 1 turn."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.NatureFragranceCooldownMinusOne, "자연의 향기 재사용 대기시간 -1", "자연의 향기 재사용 대기시간이 1턴 감소합니다."));
                 if (hasNatureFragranceAttack && natureFragranceHealBonus < 1)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.NatureFragranceHealPlusOne, "Nature Fragrance Heal +1", "Increase nature fragrance healing by 1."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.NatureFragranceHealPlusOne, "자연의 향기 치유량 +1", "자연의 향기 치유량이 1 증가합니다."));
                 if (!hasArcaneAccelerationPassive)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ArcaneAccelerationPassive, "Passive: Arcane Acceleration", "Every third turn, the first attack does not end this unit's action."));
+                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.ArcaneAccelerationPassive, "패시브: 마도 증속", "3턴마다 첫 공격 후에도 행동을 계속할 수 있습니다."));
             }
 
             for (var i = 0; i < candidates.Count; i++)
@@ -2066,7 +2088,7 @@ ThrustHasKnockback = thrustHasKnockback,
             return healedAmount > 0;
         }
 
-        public void TakeDamage(int amount, TacticalUnit source = null)
+        public void TakeDamage(int amount, TacticalUnit source = null, string skillKeyOverride = null)
         {
             if (!IsAlive || amount <= 0)
                 return;
@@ -2081,9 +2103,11 @@ if (hasAgilityPassive && agilityShieldAvailable)
             if (source != null && source != this)
             {
                 LastDamageSource = source;
-                LastDamageSkillKey = !string.IsNullOrWhiteSpace(source.currentDamageSkillKey)
-                    ? source.currentDamageSkillKey
-                    : source.lastAttackSkillKey ?? string.Empty;
+                LastDamageSkillKey = !string.IsNullOrWhiteSpace(skillKeyOverride)
+                    ? skillKeyOverride
+                    : !string.IsNullOrWhiteSpace(source.currentDamageSkillKey)
+                        ? source.currentDamageSkillKey
+                        : source.lastAttackSkillKey ?? string.Empty;
             }
             unitAnimator?.PlayHit();
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
@@ -2993,7 +3017,8 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
         }
 
         public void ConfigureAsCrate(
-            int maxHealth = 2, bool explosive = false, int damage = 3)
+            int maxHealth = 2, bool explosive = false, int damage = 3,
+            string displayName = null, Sprite sprite = null, string description = null, string functionDescription = null)
         {
             isCrate = true;
             isObjective = false;
@@ -3002,6 +3027,10 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             team = UnitTeam.Neutral;
             crateMaxHealth = Mathf.Max(1, maxHealth);
             explosionDamage = Mathf.Max(1, damage);
+            objectiveDisplayName = string.IsNullOrWhiteSpace(displayName) ? (explosive ? "Bomb Crate" : "Crate") : displayName.Trim();
+            objectSpriteOverride = sprite;
+            objectFunctionDescription = functionDescription ?? string.Empty;
+            objectiveDescription = description ?? string.Empty;
             if (!IsPlaced)
             {
                 CurrentHealth = MaxHealth;
@@ -3010,7 +3039,7 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             SetHealthBarVisible(false);
         }
 
-        public void ConfigureAsObjective(int maxHealth = 8)
+        public void ConfigureAsObjective(int maxHealth = 8, string displayName = null, string description = null, int level = 1)
         {
             isCrate = true;
             isObjective = true;
@@ -3019,6 +3048,9 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             team = UnitTeam.Neutral;
             crateMaxHealth = Mathf.Max(1, maxHealth);
             explosionDamage = 0;
+            objectiveDisplayName = string.IsNullOrWhiteSpace(displayName) ? "Objective" : displayName.Trim();
+            objectiveDescription = description ?? string.Empty;
+            currentLevel = Mathf.Max(1, level);
             if (!IsPlaced)
             {
                 CurrentHealth = MaxHealth;

@@ -54,6 +54,8 @@ namespace StellaStair.Units
     public sealed class UnitDefinition : ScriptableObject
     {
         [field: SerializeField] public string DisplayName { get; private set; } = "Unit";
+        [field: SerializeField, TextArea(2, 4)] public string Description { get; private set; } = string.Empty;
+        [field: SerializeField, Min(1)] public int StartingLevel { get; private set; } = 1;
         [field: SerializeField, Min(1)] public int MovementPoints { get; private set; } = 5;
         [field: SerializeField, Min(0.1f)] public float MoveSpeed { get; private set; } = 5f;
         [field: SerializeField, Min(1)] public int MaxHealth { get; private set; } = 10;

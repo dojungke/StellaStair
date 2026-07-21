@@ -64,7 +64,6 @@ namespace StellaStair.Presentation
                 ApplyLine(line, database);
                 yield return null;
                 yield return RevealDialogueText(line != null ? line.text ?? string.Empty : string.Empty);
-
                 yield return null;
                 advanceRequested = false;
                 while (!ConsumeAdvanceRequest())
@@ -158,12 +157,12 @@ namespace StellaStair.Presentation
         {
             if (speakerNameLabel != null)
                 speakerNameLabel.text = line != null ? line.speakerName ?? string.Empty : string.Empty;
-            ApplyPortrait(leftPortraitImage, leftDarkOverlayImage, line?.leftCharacterId, line?.leftPortrait ?? TacticalDialoguePortraitMode.Empty, database);
-            ApplyPortrait(rightPortraitImage, rightDarkOverlayImage, line?.rightCharacterId, line?.rightPortrait ?? TacticalDialoguePortraitMode.Empty, database);
+            ApplyPortrait(leftPortraitImage, leftDarkOverlayImage, line?.leftCharacterId, line?.leftPortrait ?? TacticalDialoguePortraitMode.Empty, line?.leftDirection ?? TacticalDialoguePortraitDirection.Default, database);
+            ApplyPortrait(rightPortraitImage, rightDarkOverlayImage, line?.rightCharacterId, line?.rightPortrait ?? TacticalDialoguePortraitMode.Empty, line?.rightDirection ?? TacticalDialoguePortraitDirection.Default, database);
         }
 
         private void ApplyPortrait(
-            Image image, Image darkOverlay, string characterId, TacticalDialoguePortraitMode mode, TacticalDialogueDatabase database)
+            Image image, Image darkOverlay, string characterId, TacticalDialoguePortraitMode mode, TacticalDialoguePortraitDirection direction, TacticalDialogueDatabase database)
         {
             if (image == null)
                 return;
@@ -179,6 +178,9 @@ namespace StellaStair.Presentation
             image.enabled = true;
             image.sprite = sprite;
             image.color = normalColor;
+            var scale = image.rectTransform.localScale;
+            scale.x = Mathf.Abs(scale.x) * (direction == TacticalDialoguePortraitDirection.Flipped ? -1f : 1f);
+            image.rectTransform.localScale = scale;
             FitPortraitSize(image);
             MatchOverlayToPortrait(darkOverlay, image);
             SetOverlayVisible(darkOverlay, mode == TacticalDialoguePortraitMode.Dark, sprite);

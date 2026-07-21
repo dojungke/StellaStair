@@ -140,7 +140,7 @@ namespace StellaStair.Presentation
                 ? currentUnit.Definition.DisplayName
                 : currentUnit.name;
             titleLabel.text = "레벨업 강화 선택";
-            unitLabel.text = $"{displayName}  Lv.{currentUnit.CurrentLevel}   EXP {currentUnit.CurrentExperience}/{currentUnit.ExperienceToNextLevel}";
+            unitLabel.text = $"{displayName}  레벨 {currentUnit.CurrentLevel}   경험치 {currentUnit.CurrentExperience}/{currentUnit.ExperienceToNextLevel}";
             hintLabel.text = "강화 1개를 선택하세요. 클릭 또는 숫자키 1 / 2 / 3";
         }
 

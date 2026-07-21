@@ -138,7 +138,7 @@ namespace StellaStair.Presentation
             EnsureDependencies();
             var stage = stageProgression != null ? stageProgression.CurrentStage : null;
             var line = dialogueDatabase != null
-                ? dialogueDatabase.GetRandomLine(stage, timing, GetSpeakerKey(speaker), skillKey, timing == TacticalDialogueTiming.SkillUsed, true)
+                ? dialogueDatabase.GetNextLine(stage, timing, GetSpeakerKey(speaker), skillKey, timing == TacticalDialogueTiming.SkillUsed, true)
                 : null;
             lastDialogueDuration = line != null && line.duration > 0f ? line.duration : bubbleDuration;
             var text = line != null && !string.IsNullOrWhiteSpace(line.text)

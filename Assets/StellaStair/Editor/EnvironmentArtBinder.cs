@@ -52,11 +52,18 @@ namespace StellaStair.Editor
                     if (sprite == null || tile == null)
                         continue;
 
-                    if (tile.sprite == sprite && tile.color == Color.white)
+                    if (tile.sprite == sprite && tile.color == Color.white && !binding.TilePath.EndsWith("Ladder.asset", System.StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     tile.sprite = sprite;
                     tile.color = Color.white;
+                    if (binding.TilePath.EndsWith("Ladder.asset", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        var spriteWidth = Mathf.Max(0.0001f, sprite.bounds.size.x);
+                        tile.transform = Matrix4x4.TRS(
+                            Vector3.zero, Quaternion.identity,
+                            new Vector3(1f / spriteWidth, 1f, 1f));
+                    }
                     EditorUtility.SetDirty(tile);
                     changed = true;
                 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using StellaStair.Grid;
 using StellaStair.Units;
 using UnityEngine;
 
@@ -10,11 +11,17 @@ namespace StellaStair.Battle
     public sealed class PlayerPartySpawner : MonoBehaviour
     {
         [Serializable]
-        private struct PartyMember
+        public sealed class PartyMember
         {
+            [Tooltip("Name of the spawned unit object.") ]
             public string objectName;
+            [Tooltip("Fallback Resources asset name when Definition is empty.")]
             public string definitionName;
+            [Tooltip("UnitDefinition asset used to create this party member.")]
+            public UnitDefinition definition;
+            [Tooltip("Initial staging position before deployment.")]
             public Vector3 stagingPosition;
+            [Tooltip("Fallback color when the definition has no visual.")]
             public Color fallbackColor;
 
             public PartyMember(
@@ -22,11 +29,14 @@ namespace StellaStair.Battle
             {
                 this.objectName = objectName;
                 this.definitionName = definitionName;
+                this.definition = null;
                 this.stagingPosition = stagingPosition;
                 this.fallbackColor = fallbackColor;
             }
         }
 
+        [Header("Player Party")]
+        [Tooltip("Player units spawned when entering a stage. Add entries and assign a UnitDefinition.")]
         [SerializeField] private List<PartyMember> defaultParty = new()
         {
             new PartyMember("Player Wizard", "Wizard", new Vector3(-4f, 3.5f), new Color(0.7f, 0.35f, 1f)),
@@ -57,8 +67,24 @@ namespace StellaStair.Battle
             if (battle.PlayerUnits.Count > 0)
                 battle.ClearPlayers(true);
 
-            foreach (var member in defaultParty)
-                SpawnPlayer(battle, member);
+            var deploymentCells = new List<GridPosition>(battle.Board != null
+                ? battle.Board.GetPlayerDeploymentCells()
+                : Array.Empty<GridPosition>());
+            deploymentCells.Sort((left, right) =>
+            {
+                var y = left.Y.CompareTo(right.Y);
+                return y != 0 ? y : left.X.CompareTo(right.X);
+            });
+
+            for (var i = 0; i < defaultParty.Count; i++)
+            {
+                var member = defaultParty[i];
+                var stagingPosition = member.stagingPosition;
+                if (battle.Board != null && i < deploymentCells.Count)
+                    stagingPosition = battle.Board.PositionToWorld(deploymentCells[i]) +
+                        Vector3.up * (battle.Board.Grid.cellSize.y * 2f);
+                SpawnPlayer(battle, member, stagingPosition);
+            }
 
             hasSpawned = true;
         }
@@ -76,13 +102,18 @@ namespace StellaStair.Battle
                 savedPartyProgress[unit.ProgressKey] = unit.CaptureProgress();
             }
         }
-        private static void SpawnPlayer(DeploymentManager battle, PartyMember member)
+        private static void SpawnPlayer(DeploymentManager battle, PartyMember member, Vector3 stagingPosition)
         {
-            var definition = LoadDefinition(member.definitionName);
+            var definition = member.definition != null
+                ? member.definition
+                : LoadDefinition(member.definitionName);
+            var objectName = !string.IsNullOrWhiteSpace(member.objectName)
+                ? member.objectName
+                : definition != null ? definition.name : member.definitionName;
             var playerObject = new GameObject(
-                string.IsNullOrWhiteSpace(member.objectName) ? member.definitionName : member.objectName,
+                objectName,
                 typeof(SpriteRenderer), typeof(BoxCollider2D));
-            playerObject.transform.position = member.stagingPosition;
+            playerObject.transform.position = stagingPosition;
             playerObject.transform.localScale = Vector3.one;
 
             var renderer = playerObject.GetComponent<SpriteRenderer>();

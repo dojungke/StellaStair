@@ -23,7 +23,7 @@ namespace StellaStair.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Tactical Map Library", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "?꾩옱 ?ъ쓽 ?꾩닠 留?諛곗튂瑜?Map Data濡???ν븯嫄곕굹 遺덈윭?듬땲??",
+                "\uB9F5\uB370\uC774\uD130\uB97C \uC120\uD0DD\uD558\uACE0 \uD604\uC7AC \uC2A4\uD14C\uC774\uC9C0\uC5D0 \uBD88\uB7EC\uC624\uAC70\uB098, \uC2DC\uC98C\uC758 \uBCC0\uACBD \uB0B4\uC6A9\uC744 \uC120\uD0DD\uD55C \uB9F5\uC5D0 \uB36E\uC5B4\uC4F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
                 MessageType.Info);
             selectedMap = (TacticalMapData)EditorGUILayout.ObjectField(
                 "Selected Map", selectedMap, typeof(TacticalMapData), false);
@@ -40,28 +40,11 @@ namespace StellaStair.Editor
                     "Background Tint", selectedMap.BackgroundTint);
                 var stageType = (TacticalStageType)EditorGUILayout.EnumPopup(
                     "Stage Type", selectedMap.stageType);
-                var attackObjectiveHealth = selectedMap.AttackObjectiveMaxHealth;
-                var defenseObjectiveHealth = selectedMap.DefenseObjectiveMaxHealth;
-                var attackObjectiveSprite = selectedMap.attackObjectiveSprite;
-                var defenseObjectiveSprite = selectedMap.defenseObjectiveSprite;
                 var defenseTurns = selectedMap.defenseTurnsToSurvive;
                 var escortTurns = selectedMap.escortTurnsToSurvive;
                 var escortKey = selectedMap.escortUnitProgressKey;
-
-                if (stageType == TacticalStageType.Attack)
-                {
-                    attackObjectiveHealth = EditorGUILayout.IntField(
-                        "Attack Objective HP", attackObjectiveHealth);
-                    attackObjectiveSprite = (Sprite)EditorGUILayout.ObjectField(
-                        "Attack Objective Image", attackObjectiveSprite, typeof(Sprite), false);
-                }
-
                 if (stageType == TacticalStageType.Defense)
                 {
-                    defenseObjectiveHealth = EditorGUILayout.IntField(
-                        "Defense Objective HP", defenseObjectiveHealth);
-                    defenseObjectiveSprite = (Sprite)EditorGUILayout.ObjectField(
-                        "Defense Objective Image", defenseObjectiveSprite, typeof(Sprite), false);
                     defenseTurns = EditorGUILayout.IntField(
                         "Defense Turns", defenseTurns);
                 }
@@ -81,16 +64,17 @@ namespace StellaStair.Editor
                     selectedMap.backgroundSprite = backgroundSprite;
                     selectedMap.backgroundTint = backgroundTint;
                     selectedMap.stageType = stageType;
-                    selectedMap.attackObjectiveMaxHealth = Mathf.Max(1, attackObjectiveHealth);
-                    selectedMap.defenseObjectiveMaxHealth = Mathf.Max(1, defenseObjectiveHealth);
-                    selectedMap.attackObjectiveSprite = attackObjectiveSprite;
-                    selectedMap.defenseObjectiveSprite = defenseObjectiveSprite;
+
+
+
                     selectedMap.defenseTurnsToSurvive = Mathf.Max(1, defenseTurns);
                     selectedMap.escortTurnsToSurvive = Mathf.Max(1, escortTurns);
                     selectedMap.escortUnitProgressKey = escortKey ?? string.Empty;
                     SaveSelectedMapAsset();
                 }
 
+                DrawEnemyUnitLayers();
+                DrawObjectiveLayers();
                 DrawRoundControls();
             }
 
@@ -99,12 +83,137 @@ namespace StellaStair.Editor
                 SaveAsNew();
             using (new EditorGUI.DisabledScope(selectedMap == null))
             {
-                if (GUILayout.Button("Overwrite Selected Map"))
+                if (GUILayout.Button("Overwrite Selected Map") &&
+                    EditorUtility.DisplayDialog(
+                        "Map Override Confirmation",
+                        "The current scene map data will overwrite the selected map asset. Continue?",
+                        "Overwrite", "Cancel"))
                     SaveTo(selectedMap);
                 if (GUILayout.Button("Load Selected Map Into Scene"))
                     LoadSelected();
                 if (GUILayout.Button("Register Selected Map As Stage"))
                     RegisterSelectedStage();
+            }
+        }
+
+        private void DrawEnemyUnitLayers()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Enemy Unit Layers", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Enemy types configured for this map. Each type is loaded into its own spawn tilemap.",
+                EditorStyles.miniLabel);
+
+            if (selectedMap.enemyUnitLayers == null)
+                selectedMap.enemyUnitLayers = new List<TacticalMapData.EnemyUnitLayer>();
+
+            var removeIndex = -1;
+            for (var i = 0; i < selectedMap.enemyUnitLayers.Count; i++)
+            {
+                var layer = selectedMap.enemyUnitLayers[i];
+                if (layer == null)
+                {
+                    layer = new TacticalMapData.EnemyUnitLayer();
+                    selectedMap.enemyUnitLayers[i] = layer;
+                }
+
+                using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+                {
+                    EditorGUI.BeginChangeCheck();
+                    layer.definition = (StellaStair.Units.UnitDefinition)EditorGUILayout.ObjectField(
+                        layer.definition, typeof(StellaStair.Units.UnitDefinition), false,
+                        GUILayout.MinWidth(140f));
+
+
+                    layer.color = EditorGUILayout.ColorField(layer.color, GUILayout.Width(72f));
+                    EditorGUILayout.LabelField(
+                        $"{(layer.spawns != null ? layer.spawns.Count : 0)} cells",
+                        EditorStyles.miniLabel, GUILayout.Width(55f));
+                    if (GUILayout.Button("-", GUILayout.Width(24f)))
+                        removeIndex = i;
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(selectedMap, "Edit Enemy Unit Layers");
+                        EditorUtility.SetDirty(selectedMap);
+                        AssetDatabase.SaveAssets();
+                    }
+                }
+            }
+
+            if (removeIndex >= 0)
+            {
+                var removedLayer = selectedMap.enemyUnitLayers[removeIndex];
+                Undo.RecordObject(selectedMap, "Remove Enemy Unit Layer");
+                if (removedLayer != null && removedLayer.definition != null)
+                {
+                    var board = Object.FindAnyObjectByType<TacticalBoard>();
+                    var tilemap = FindLayer(board, GetEnemyLayerName(removedLayer));
+                    if (tilemap != null)
+                        Undo.DestroyObjectImmediate(tilemap.gameObject);
+                }
+                selectedMap.enemyUnitLayers.RemoveAt(removeIndex);
+                SaveSelectedMapAsset();
+                return;
+            }
+
+            if (GUILayout.Button("+ Add Enemy Unit Type"))
+            {
+                Undo.RecordObject(selectedMap, "Add Enemy Unit Layer");
+                selectedMap.enemyUnitLayers.Add(new TacticalMapData.EnemyUnitLayer());
+                SaveSelectedMapAsset();
+            }
+        }
+
+        private void DrawObjectiveLayers()
+        {
+            if (selectedMap == null)
+                return;
+            var isDefense = selectedMap.stageType == TacticalStageType.Defense;
+            var layers = isDefense ? selectedMap.defenseObjectiveLayers : selectedMap.objectiveLayers;
+            if (layers == null)
+            {
+                layers = new List<TacticalMapData.ObjectiveLayer>();
+                if (isDefense)
+                    selectedMap.defenseObjectiveLayers = layers;
+                else
+                    selectedMap.objectiveLayers = layers;
+            }
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(isDefense ? "Defense Objective Types" : "Objective Types", EditorStyles.boldLabel);
+            var removeIndex = -1;
+            for (var i = 0; i < layers.Count; i++)
+            {
+                var layer = layers[i] ?? (layers[i] = new TacticalMapData.ObjectiveLayer());
+                using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+                {
+                    layer.data = (TacticalObjectiveData)EditorGUILayout.ObjectField(layer.data, typeof(TacticalObjectiveData), false, GUILayout.MinWidth(160f));
+                    if (layer.data == null && GUILayout.Button("Create", GUILayout.Width(56f)))
+                        layer.data = CreateObjectiveDataAsset(isDefense ? "DefenseObjectiveData" : "ObjectiveData");
+                    layer.color = EditorGUILayout.ColorField(layer.color, GUILayout.Width(90f));
+                    if (GUILayout.Button("Remove", GUILayout.Width(64f)))
+                        removeIndex = i;
+                }
+            }
+            if (removeIndex >= 0)
+            {
+                var removedLayer = layers[removeIndex];
+                Undo.RecordObject(selectedMap, "Remove Objective Layer");
+                if (removedLayer != null && removedLayer.data != null)
+                {
+                    var board = Object.FindAnyObjectByType<TacticalBoard>();
+                    var tilemap = FindLayer(board, GetObjectiveLayerName(removedLayer, isDefense));
+                    if (tilemap != null)
+                        Undo.DestroyObjectImmediate(tilemap.gameObject);
+                }
+                layers.RemoveAt(removeIndex);
+                SaveSelectedMapAsset();
+                return;
+            }
+            if (GUILayout.Button(isDefense ? "+ Add Defense Objective Type" : "+ Add Objective Type"))
+            {
+                Undo.RecordObject(selectedMap, "Add Objective Layer");
+                layers.Add(new TacticalMapData.ObjectiveLayer());
+                SaveSelectedMapAsset();
             }
         }
 
@@ -148,7 +257,7 @@ namespace StellaStair.Editor
             if (selectedMap.rounds.Count == 0)
             {
                 EditorGUILayout.HelpBox(
-                    "No extra rounds. Add a round, then save the current scene map into it.",
+                    "\uB9F5\uB370\uC774\uD130\uB97C \uC120\uD0DD\uD558\uACE0 \uD604\uC7AC \uC2A4\uD14C\uC774\uC9C0\uC5D0 \uBD88\uB7EC\uC624\uAC70\uB098, \uC2DC\uC98C\uC758 \uBCC0\uACBD \uB0B4\uC6A9\uC744 \uC120\uD0DD\uD55C \uB9F5\uC5D0 \uB36E\uC5B4\uC4F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
                     MessageType.Info);
                 return;
             }
@@ -347,6 +456,22 @@ namespace StellaStair.Editor
                 : round.roundName;
         }
 
+        private TacticalObjectiveData CreateObjectiveDataAsset(string defaultName)
+        {
+            var path = EditorUtility.SaveFilePanelInProject(
+                "Create Tactical Objective Data", defaultName, "asset", "Choose where to save the objective data asset.");
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            var asset = ScriptableObject.CreateInstance<TacticalObjectiveData>();
+            AssetDatabase.CreateAsset(asset, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            EditorGUIUtility.PingObject(asset);
+            GUI.changed = true;
+            return asset;
+        }
+
         private void SaveSelectedMapAsset()
         {
             EditorUtility.SetDirty(selectedMap);
@@ -399,6 +524,9 @@ namespace StellaStair.Editor
             Capture(board.DefenseObjectiveTilemap, map.defenseObjectives);
             Capture(FindLayer(board, "Enemy Guard Spawns"), map.enemyGuardSpawns);
             Capture(FindLayer(board, "Enemy Soldier Spawns"), map.enemySoldierSpawns);
+            CaptureEnemyUnitLayers(board, map.enemyUnitLayers);
+            CaptureObjectiveLayers(board, map.objectiveLayers, false);
+            CaptureObjectiveLayers(board, map.defenseObjectiveLayers, true);
 
             EditorUtility.SetDirty(map);
             AssetDatabase.SaveAssets();
@@ -435,7 +563,7 @@ namespace StellaStair.Editor
                 return;
             if (!EditorUtility.DisplayDialog(
                     "Load Tactical Round",
-                    "?꾩옱 ?ъ쓽 諛곗튂瑜??좏깮???쇱슫??留듭쑝濡?援먯껜?좉퉴??",
+                    "\uC120\uD0DD\uD55C \uB77C\uC6B4\uB4DC \uB370\uC774\uD130\uB85C \uD604\uC7AC \uC2A4\uD14C\uC774\uC9C0\uC758 \uB9F5\uC744 \uB36E\uC5B4\uC4F0\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
                     "Load", "Cancel"))
                 return;
 
@@ -475,7 +603,7 @@ namespace StellaStair.Editor
                 return;
             if (!EditorUtility.DisplayDialog(
                     "Load Tactical Map",
-                    "?꾩옱 ?ъ쓽 諛곗튂瑜??좏깮??留듭쑝濡?援먯껜?좉퉴??",
+                    "\uC120\uD0DD\uD55C \uB9F5 \uB370\uC774\uD130\uB85C \uD604\uC7AC \uC2A4\uD14C\uC774\uC9C0\uC758 \uB9F5\uC744 \uB36E\uC5B4\uC4F0\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
                     "Load", "Cancel"))
                 return;
 
@@ -502,6 +630,10 @@ namespace StellaStair.Editor
             Restore(defenseObjectiveLayer, selectedMap.defenseObjectives);
             Restore(EnsureLayer(board, "Enemy Guard Spawns", 21), selectedMap.enemyGuardSpawns);
             Restore(EnsureLayer(board, "Enemy Soldier Spawns", 21), selectedMap.enemySoldierSpawns);
+            RestoreEnemyUnitLayers(board, selectedMap.enemyUnitLayers);
+            selectedMap.RemoveGeneratedObjectiveLayers(board);
+            RestoreObjectiveLayers(board, selectedMap.objectiveLayers, false);
+            RestoreObjectiveLayers(board, selectedMap.defenseObjectiveLayers, true);
 
             EditorSceneManager.MarkSceneDirty(board.gameObject.scene);
             SceneView.RepaintAll();
@@ -537,6 +669,8 @@ namespace StellaStair.Editor
 
         private static Tilemap FindLayer(TacticalBoard board, string name)
         {
+            if (board == null)
+                return null;
             var child = board.Grid != null ? board.Grid.transform.Find(name) : null;
             return child != null ? child.GetComponent<Tilemap>() : null;
         }
@@ -564,6 +698,73 @@ namespace StellaStair.Editor
                 board.ConfigureDefenseObjectives(tilemap, board.DefenseObjectiveMaxHealth);
             EditorUtility.SetDirty(board);
             return tilemap;
+        }
+
+        private static void CaptureEnemyUnitLayers(
+            TacticalBoard board, List<TacticalMapData.EnemyUnitLayer> layers)
+        {
+            if (board == null || layers == null)
+                return;
+            foreach (var layer in layers)
+            {
+                if (layer == null || layer.definition == null)
+                    continue;
+                Capture(
+                    FindLayer(board, GetEnemyLayerName(layer)),
+                    layer.spawns);
+            }
+        }
+
+        private static void RestoreEnemyUnitLayers(
+            TacticalBoard board, List<TacticalMapData.EnemyUnitLayer> layers)
+        {
+            if (board == null || layers == null)
+                return;
+            foreach (var layer in layers)
+            {
+                if (layer == null || layer.definition == null)
+                    continue;
+                var tilemap = EnsureLayer(board, GetEnemyLayerName(layer), 21);
+                Restore(tilemap, layer.spawns);
+                var marker = tilemap.GetComponent<EnemySpawnTilemap>();
+                if (marker == null)
+                    marker = tilemap.gameObject.AddComponent<EnemySpawnTilemap>();
+                marker.Configure(layer.definition, layer.color);
+            }
+        }
+
+        private static string GetEnemyLayerName(TacticalMapData.EnemyUnitLayer layer)
+        {
+            var definitionName = layer != null && layer.definition != null
+                ? layer.definition.name
+                : "Enemy";
+            return $"{definitionName} Spawns";
+        }
+        private static void CaptureObjectiveLayers(TacticalBoard board, List<TacticalMapData.ObjectiveLayer> layers, bool defense)
+        {
+            if (board == null || layers == null)
+                return;
+            foreach (var layer in layers)
+                if (layer != null && layer.data != null)
+                    Capture(FindLayer(board, GetObjectiveLayerName(layer, defense)), layer.spawns);
+        }
+
+        private static void RestoreObjectiveLayers(TacticalBoard board, List<TacticalMapData.ObjectiveLayer> layers, bool defense)
+        {
+            if (board == null || layers == null)
+                return;
+            foreach (var layer in layers)
+            {
+                if (layer == null || layer.data == null)
+                    continue;
+                Restore(EnsureLayer(board, GetObjectiveLayerName(layer, defense), 20), layer.spawns);
+            }
+        }
+
+        private static string GetObjectiveLayerName(TacticalMapData.ObjectiveLayer layer, bool defense)
+        {
+            var name = layer != null && layer.data != null ? layer.data.name : "Objective";
+            return $"{name}{(defense ? " Defense" : string.Empty)} Objectives";
         }
 
         private static void Capture(Tilemap tilemap, List<TacticalMapData.Cell> destination)

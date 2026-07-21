@@ -115,34 +115,42 @@ MonoBehaviour:
     color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
   ladders:
   - position: {x: 5, y: 1, z: 0}
-    tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+    tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 5, y: 2, z: 0}
-    tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+    tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 5, y: 3, z: 0}
-    tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+    tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 5, y: 4, z: 0}
-    tile: {fileID: 11400000, guid: 6f9c74de093570749af4b5376c5e9e25, type: 2}
+    tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
   wood: []
   crates: []
   bombCrates: []
-  objectiveTargets:
-  - position: {x: 2, y: 1, z: 0}
-    tile: {fileID: 11400000, guid: d21d3b111b0e5d448847906f286caa06, type: 2}
-    color: {r: 1, g: 1, b: 1, a: 1}
-  - position: {x: -4, y: 5, z: 0}
-    tile: {fileID: 11400000, guid: d21d3b111b0e5d448847906f286caa06, type: 2}
-    color: {r: 1, g: 1, b: 1, a: 1}
+  objectiveTargets: []
   defenseObjectives: []
   enemyGuardSpawns: []
   enemySoldierSpawns: []
+  enemyUnitLayers: []
+  objectiveLayers:
+  - data: {fileID: 11400000, guid: 111cb5a78bdcaab4998ffe17c86e1942, type: 2}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    spawns:
+    - position: {x: 1, y: 1, z: 0}
+      tile: {fileID: 11400000, guid: 581ff09539e4475da76bc0621135807d, type: 2}
+      color: {r: 1, g: 0.82, b: 0.12, a: 1}
+    - position: {x: -3, y: 5, z: 0}
+      tile: {fileID: 11400000, guid: 581ff09539e4475da76bc0621135807d, type: 2}
+      color: {r: 1, g: 0.82, b: 0.12, a: 1}
+  defenseObjectiveLayers: []
   mapName: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
   mapDescription: "\uC57D\uCD08\uB97C 2\uAC1C \uCCB4\uC9D1\uD574 \uAC00\uC838\uC624\uC2DC\uC624.\n\n\uBCF4\uC218:
     \uCD08\uBCF4 \uBAA8\uD5D8\uAC00 \uC790\uACA9\uC99D \uBC1C\uAE09\n-\uBAA8\uD5D8\uAC00
     \uAE38\uB4DC"
+  objectiveName: 
+  objectiveDescription: 
   backgroundSprite: {fileID: 21300000, guid: 8d70f7c15ef54c34b2959d45518d11f7, type: 3}
   backgroundTint: {r: 1, g: 1, b: 1, a: 1}
   uiElements: []
@@ -150,8 +158,10 @@ MonoBehaviour:
   stageType: 1
   attackObjectiveMaxHealth: 1
   defenseObjectiveMaxHealth: 12
-  attackObjectiveSprite: {fileID: 10911, guid: 0000000000000000f000000000000000, type: 0}
+  attackObjectiveSprite: {fileID: -355798565296084813, guid: 363ae99165992d448a089d81ecb1c014, type: 3}
   defenseObjectiveSprite: {fileID: 0}
+  attackObjective: {fileID: 11400000, guid: 111cb5a78bdcaab4998ffe17c86e1942, type: 2}
+  defenseObjective: {fileID: 0}
   defenseTurnsToSurvive: 5
   escortTurnsToSurvive: 5
   escortUnitProgressKey: 

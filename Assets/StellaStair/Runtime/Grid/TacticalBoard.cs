@@ -21,10 +21,15 @@ namespace StellaStair.Grid
         [SerializeField] private Tilemap objectiveTilemap;
         [SerializeField] private Tilemap defenseObjectiveTilemap;
         [SerializeField] private TacticalObjectDatabase objectDatabase;
+        private TacticalObjectData woodObjectData;
+        private TacticalObjectData crateObjectData;
+        private TacticalObjectData bombCrateObjectData;
         [SerializeField, Min(1)] private int woodMaxHealth = 2;
         [SerializeField, Min(1)] private int objectiveMaxHealth = 8;
         [SerializeField, Min(1)] private int defenseObjectiveMaxHealth = 12;
         [SerializeField] private Sprite objectiveSpriteOverride;
+        private TacticalObjectiveData attackObjectiveData;
+        private TacticalObjectiveData defenseObjectiveData;
         [SerializeField] private Sprite defenseObjectiveSpriteOverride;
         [SerializeField, Min(0)] private int maximumStepUp = 1;
         [SerializeField, Min(0)] private int maximumDrop = 2;
@@ -49,16 +54,17 @@ namespace StellaStair.Grid
         public Tilemap ObjectiveTilemap => objectiveTilemap;
         public Tilemap DefenseObjectiveTilemap => defenseObjectiveTilemap;
         public TacticalObjectDatabase ObjectDatabase => objectDatabase;
-        public int WoodMaxHealth => objectDatabase != null
+        public TacticalObjectData WoodObjectData => woodObjectData != null ? woodObjectData : objectDatabase != null ? objectDatabase.WoodObjectData : null;
+        public int WoodMaxHealth => woodObjectData != null ? woodObjectData.MaxHealth : objectDatabase != null
             ? objectDatabase.WoodMaxHealth
             : woodMaxHealth;
-        public int CrateMaxHealth => objectDatabase != null
+        public int CrateMaxHealth => crateObjectData != null ? crateObjectData.MaxHealth : objectDatabase != null
             ? objectDatabase.CrateMaxHealth
             : 2;
-        public int BombCrateMaxHealth => objectDatabase != null
+        public int BombCrateMaxHealth => bombCrateObjectData != null ? bombCrateObjectData.MaxHealth : objectDatabase != null
             ? objectDatabase.BombCrateMaxHealth
             : 1;
-        public int BombCrateExplosionDamage => objectDatabase != null
+        public int BombCrateExplosionDamage => bombCrateObjectData != null ? bombCrateObjectData.ExplosionDamage : objectDatabase != null
             ? objectDatabase.BombCrateExplosionDamage
             : 3;
         public int ObjectiveMaxHealth => !objectiveSettingsConfigured && objectDatabase != null
@@ -75,11 +81,11 @@ namespace StellaStair.Grid
             if (grid == null || walkableTilemap == null)
                 throw new InvalidOperationException($"{name}: Grid?� Walkable Tilemap???�결?�야 ?�니??");
             InitializeWoodHealth();
-            SpawnCratesFromTilemap(crateTilemap, false);
-            SpawnCratesFromTilemap(bombCrateTilemap, true);
+            SpawnCratesFromTilemap(crateTilemap, false, crateObjectData);
+            SpawnCratesFromTilemap(bombCrateTilemap, true, bombCrateObjectData);
             SpawnObjectivesFromTilemap(
                 objectiveTilemap, objectiveUnits,
-                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
+                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride, attackObjectiveData);
         }
 
         public void Configure(UnityEngine.Grid targetGrid, Tilemap walkable, Tilemap deployment)
@@ -96,13 +102,19 @@ namespace StellaStair.Grid
 
         public void ConfigureObjectiveSettings(
             int attackMaxHealth, int defenseMaxHealth,
-            Sprite attackSprite, Sprite defenseSprite)
+            Sprite attackSprite, Sprite defenseSprite, TacticalObjectiveData attackData = null, TacticalObjectiveData defenseData = null,
+            TacticalObjectData woodData = null, TacticalObjectData crateData = null, TacticalObjectData bombCrateData = null)
         {
             objectiveSettingsConfigured = true;
             objectiveMaxHealth = Mathf.Max(1, attackMaxHealth);
             defenseObjectiveMaxHealth = Mathf.Max(1, defenseMaxHealth);
             objectiveSpriteOverride = attackSprite;
             defenseObjectiveSpriteOverride = defenseSprite;
+            attackObjectiveData = attackData;
+            defenseObjectiveData = defenseData;
+            woodObjectData = woodData != null ? woodData : objectDatabase != null ? objectDatabase.WoodObjectData : null;
+            crateObjectData = crateData != null ? crateData : objectDatabase != null ? objectDatabase.CrateObjectData : null;
+            bombCrateObjectData = bombCrateData != null ? bombCrateData : objectDatabase != null ? objectDatabase.BombCrateObjectData : null;
         }
 
         public void ConfigureLadder(Tilemap ladders) => ladderTilemap = ladders;
@@ -118,14 +130,14 @@ namespace StellaStair.Grid
         {
             crateTilemap = crates;
             if (Application.isPlaying)
-                SpawnCratesFromTilemap(crateTilemap, false);
+                SpawnCratesFromTilemap(crateTilemap, false, crateObjectData);
         }
 
         public void ConfigureBombCrates(Tilemap crates)
         {
             bombCrateTilemap = crates;
             if (Application.isPlaying)
-                SpawnCratesFromTilemap(bombCrateTilemap, true);
+                SpawnCratesFromTilemap(bombCrateTilemap, true, bombCrateObjectData);
         }
 
         public void ConfigureObjectives(Tilemap objectives, int maxHealth = 8)
@@ -135,7 +147,7 @@ namespace StellaStair.Grid
             if (Application.isPlaying)
                 SpawnObjectivesFromTilemap(
                     objectiveTilemap, objectiveUnits,
-                    "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
+                    "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride, attackObjectiveData);
         }
 
         public void ConfigureDefenseObjectives(Tilemap objectives, int maxHealth = 12)
@@ -144,28 +156,36 @@ namespace StellaStair.Grid
             defenseObjectiveMaxHealth = Mathf.Max(1, maxHealth);
         }
 
+        public void ConfigureObjectiveLayer(Tilemap objectives, TacticalObjectiveData data, bool defense)
+        {
+            if (objectives == null || data == null)
+                return;
+            var destination = defense ? defenseObjectiveUnits : objectiveUnits;
+            SpawnObjectivesFromTilemap(objectives, destination, data.DisplayName, data.MaxHealth, data.Sprite, data);
+        }
+
         public void SpawnRuntimeMarkers()
         {
             SpawnCrateMarkers();
             SpawnObjectivesFromTilemap(
                 objectiveTilemap, objectiveUnits,
-                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride);
+                "Attack Objective", ObjectiveMaxHealth, objectiveSpriteOverride, attackObjectiveData);
         }
 
         public void SpawnCrateMarkers()
         {
-            SpawnCratesFromTilemap(crateTilemap, false);
-            SpawnCratesFromTilemap(bombCrateTilemap, true);
+            SpawnCratesFromTilemap(crateTilemap, false, crateObjectData);
+            SpawnCratesFromTilemap(bombCrateTilemap, true, bombCrateObjectData);
         }
 
         public void SpawnDefenseObjectiveMarkers()
         {
             SpawnObjectivesFromTilemap(
                 defenseObjectiveTilemap, defenseObjectiveUnits,
-                "Defense Objective", DefenseObjectiveMaxHealth, defenseObjectiveSpriteOverride);
+                "Defense Objective", DefenseObjectiveMaxHealth, defenseObjectiveSpriteOverride, defenseObjectiveData);
         }
 
-        private void SpawnCratesFromTilemap(Tilemap source, bool explosive)
+        private void SpawnCratesFromTilemap(Tilemap source, bool explosive, TacticalObjectData objectData = null)
         {
             if (source == null || grid == null || walkableTilemap == null)
                 return;
@@ -187,14 +207,18 @@ namespace StellaStair.Grid
                     typeof(SpriteRenderer), typeof(BoxCollider2D));
                 crateObject.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
                 var renderer = crateObject.GetComponent<SpriteRenderer>();
-                renderer.sprite = source.GetSprite(cell);
+                renderer.sprite = objectData != null && objectData.Sprite != null ? objectData.Sprite : source.GetSprite(cell);
                 renderer.color = source.GetColor(cell);
                 renderer.sortingOrder = 18;
                 crateObject.GetComponent<BoxCollider2D>().size = Vector2.one;
                 var crate = crateObject.AddComponent<TacticalUnit>();
                 crate.ConfigureAsCrate(
                     explosive ? BombCrateMaxHealth : CrateMaxHealth,
-                    explosive, BombCrateExplosionDamage);
+                    explosive, BombCrateExplosionDamage,
+                    objectData != null ? objectData.DisplayName : (explosive ? "Bomb Crate" : "Crate"),
+                    objectData != null ? objectData.Sprite : null,
+                    objectData != null ? objectData.Description : string.Empty,
+                    objectData != null ? objectData.FunctionDescription : string.Empty);
 
                 if (landingType == KnockbackLandingType.Collision && blockingUnit != null)
                 {
@@ -340,7 +364,7 @@ namespace StellaStair.Grid
 
         private void SpawnObjectivesFromTilemap(
             Tilemap source, List<TacticalUnit> destination,
-            string objectName, int maxHealth, Sprite spriteOverride)
+            string objectName, int maxHealth, Sprite spriteOverride, TacticalObjectiveData objectiveData = null)
         {
             if (source == null || grid == null || walkableTilemap == null)
                 return;
@@ -366,7 +390,11 @@ namespace StellaStair.Grid
                 renderer.sortingOrder = 19;
                 targetObject.GetComponent<BoxCollider2D>().size = Vector2.one;
                 var objective = targetObject.AddComponent<TacticalUnit>();
-                objective.ConfigureAsObjective(maxHealth);
+                objective.ConfigureAsObjective(
+                    maxHealth,
+                    objectiveData != null ? objectiveData.DisplayName : objectName,
+                    objectiveData != null ? objectiveData.Description : string.Empty,
+                    objectiveData != null ? objectiveData.Level : 1);
                 if (objective.TryPlace(this, position, false))
                 {
                     destination.Add(objective);
@@ -456,7 +484,8 @@ namespace StellaStair.Grid
             StartCoroutine(ExplosionVisualRoutine(center));
             foreach (var target in targets)
                 if (target != null && target.IsAlive)
-                    target.TakeDamage(damage, damageCredit ?? source);
+                    target.TakeDamage(damage, damageCredit ?? source,
+                        damageCredit != null ? "BombCrate" : null);
 
             for (var x = center.X - 1; x <= center.X + 1; x++)
                 for (var y = center.Y - 1; y <= center.Y + 1; y++)

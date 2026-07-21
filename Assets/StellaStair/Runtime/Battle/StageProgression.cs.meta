@@ -1,2 +1,18 @@
 fileFormatVersion: 2
 guid: 845d0b4f694d9074eaedee04f8613593
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - commonBattleUi: {fileID: 11400000, guid: 0b0f84cc280123e42a642ecf1ba7774b, type: 2}
+  - stageCanvas: {fileID: 1825159638559018748, guid: fe5889ceb30652d4f95e33a3503408d3, type: 3}
+  - stageNameLabel: {instanceID: 0}
+  - stageDescriptionLabel: {instanceID: 0}
+  - stageStartButton: {instanceID: 0}
+  - dialogueDatabase: {fileID: 11400000, guid: 4fcd5a8f8e35ead4abccc354d843abb2, type: 2}
+  - dialoguePresenter: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

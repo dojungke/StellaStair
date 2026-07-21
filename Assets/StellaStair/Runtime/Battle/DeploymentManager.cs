@@ -205,7 +205,9 @@ namespace StellaStair.Battle
 
         public bool CanStartBattle()
         {
-            if (playerUnits.Count == 0 || enemyUnits.Count == 0)
+            if (playerUnits.Count == 0)
+                return false;
+            if (stageType != TacticalStageType.Attack && enemyUnits.Count == 0)
                 return false;
             foreach (var unit in playerUnits)
                 if (unit == null || !unit.IsPlaced)

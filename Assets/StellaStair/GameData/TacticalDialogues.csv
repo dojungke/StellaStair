@@ -1,21 +1,42 @@
-StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,RightCharacter,RightPortrait,SkillKey,Duration
-[이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,이리,Dark,
-[이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,이리,Normal,
-[별] 테스트 2,BeforeBattle,3,이리,2234,마법사,Dark,이리,Normal,
-[별] 테스트 2,BeforeBattle,4,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.213,마법사,Dark,이리,Normal,
-*,BeforeBattle,1,이리,After victory dialogue sample.,이리,Normal,,Empty,
-*,AfterDefeat,1,Guide,After defeat dialogue sample.,Hero,Dark,Enemy,Normal,
-[연습] 약초 채집,BeforeBattle,1,기사,거의 다 온것 같네,기사,Normal,,Empty,
-[연습] 약초 채집,BeforeBattle,2,기사,모험가 등록을 하려면 약초를 가져가야 한다고 했지,기사,Normal,,Empty,
-[연습] 약초 채집,AfterVictory,1,기사,다 모았네 그럼 마을로 가자,기사,Normal,,Empty,
-*,EnemyKilled,1,Wizard,디버그,마법사,Normal,,Empty,
-*,LevelUp,1,Wizard,강화!,마법사,Normal,,Empty,
-*,AllyHealed,1,Wizard,ㅇ,마법사,Normal,,Empty,
-*,EnemyKilled,1,Knight,컷,마법사,Normal,,Empty,
-*,LevelUp,1,Knight,명예,마법사,Normal,,Empty,
-*,AllyHealed,1,Knight,선물,마법사,Normal,,Empty,
-*,SkillUsed,1,Wizard,불!,마법사,Normal,,Empty,Fireball
-*,SkillUsed,1,Wizard,얼음!,마법사,Normal,,Empty,IceSpike
-*,SkillUsed,1,Wizard,자연스러웠어,마법사,Normal,,Empty,NatureFragrance
-*,EnemyKilled,1,Wizard,뜨거울거다! 좀 많이!,마법사,Normal,,Empty,Fireball
-*,EnemyKilled,1,Wizard,머리좀 식혀,마법사,Normal,,Empty,IceSpike
+StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,LeftDirection,RightCharacter,RightPortrait,RightDirection,SkillKey,Duration
+[이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,Default,이리,Dark,Default,,
+[이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,Default,이리,Normal,Default,,
+[별] 테스트 2,BeforeBattle,3,이리,2234,마법사,Dark,Default,이리,Normal,Default,,
+[별] 테스트 2,BeforeBattle,4,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.213,마법사,Dark,Default,이리,Normal,Default,,
+*,BeforeBattle,1,이리,디버그,이리,Normal,Default,,Empty,Default,,
+*,AfterDefeat,1,Guide,디버그,Hero,Dark,Default,Enemy,Normal,Default,,
+[연습] 약초 채집,BeforeBattle,1,기사,거의 다 온것 같네 여기서 약초를 가져가자,기사,Normal,Flipped,,Empty,Default,,
+[연습] 약초 채집,BeforeBattle,2,,약초를 공격해서 채집하자,기사,Empty,Default,,Empty,Default,,
+[연습] 약초 채집,AfterVictory,1,기사,다 모았네 그럼 마을로 가자,기사,Normal,Flipped,,Empty,Default,,
+*,EnemyKilled,1,Archer,크리티컬!,,,,,,,BasicAttack,2.2
+*,SkillUsed,1,Archer,이 작살엔 필살의 집념이 담겨있지!,,,,,,,Harpoon,1
+*,EnemyKilled,1,Archer,작살냈어요!,,,,,,,Harpoon,2.2
+*,LevelUp,1,Archer,강해졌어요!,,,,,,,,1
+*,AllyHealed,1,Archer,편히는 못갈거예요.,,,,,,,,2.2
+*,SkillUsed,1,Archer,길을 열겠습니다,,,,,,,PiercingArrow,1
+*,EnemyKilled,1,Knight,잘가라!,,,,,,,,2.2
+*,LevelUp,1,Knight,한걸음더,,,,,,,,1
+*,SkillUsed,1,Knight,찔리는데 있나?,,,,,,,Thrust,1
+*,EnemyKilled,1,Wizard,디버그(벌레컷),,,,,,,,2.2
+*,LevelUp,1,Wizard,따라올 수 있겠나?,,,,,,,,1
+*,AllyHealed,1,Wizard,넌 강해졌다 돌격해!,,,,,,,,2.2
+*,SkillUsed,1,Wizard,뭇별을 태우는 서광을 내려주마,,,,,,,Fireball,1
+*,SkillUsed,1,Wizard,얼음벽을 세울게요!,,,,,,,IceSpike,1
+*,SkillUsed,1,Wizard,괜찮아 자연스러웠어,,,,,,,NatureFragrance,1
+*,EnemyKilled,1,Wizard,뜨거울거다! 좀 많이!,,,,,,,Fireball,2.2
+*,EnemyKilled,1,Wizard,얼죽아,,,,,,,IceSpike,2.2
+*,EnemyKilled,1,Wizard,새빨갛고 아름다운 불꽃놀이가 되어라!,,,,,,,BasicAttack,2.2
+*,EnemyKilled,1,Wizard,익스플로젼!,,,,,,,BombCrate,2.2
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,
+*,,,,,,,,,,,,

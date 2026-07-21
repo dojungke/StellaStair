@@ -56,7 +56,7 @@ namespace StellaStair.Presentation
             ClampPosition();
         }
 
-        public IEnumerator FocusOnPosition(Vector3 worldPosition, float duration = 0.45f)
+        public IEnumerator FocusOnPosition(Vector3 worldPosition, float duration = 0.45f, bool ignoreMinimumFocusDistance = false)
         {
             if (controlledCamera == null)
                 yield break;
@@ -65,7 +65,7 @@ namespace StellaStair.Presentation
             var target = worldPosition;
             target.y += focusVerticalOffset;
             target.z = start.z;
-            if (Vector2.Distance(start, target) <= minimumFocusDistance)
+            if (!ignoreMinimumFocusDistance && Vector2.Distance(start, target) <= minimumFocusDistance)
                 yield break;
             var elapsed = 0f;
             duration = Mathf.Max(0.01f, duration);

@@ -7,6 +7,11 @@ namespace StellaStair.Grid
         menuName = "Stella Stair/Tactical Object Database")]
     public sealed class TacticalObjectDatabase : ScriptableObject
     {
+        [Header("Object Data Assets")]
+        [SerializeField] private TacticalObjectData woodObjectData;
+        [SerializeField] private TacticalObjectData crateObjectData;
+        [SerializeField] private TacticalObjectData bombCrateObjectData;
+
         [Header("Tiles")]
         [SerializeField, Min(1)] private int woodMaxHealth = 2;
 
@@ -25,5 +30,8 @@ namespace StellaStair.Grid
         public int BombCrateExplosionDamage => bombCrateExplosionDamage;
         public int AttackObjectiveMaxHealth => attackObjectiveMaxHealth;
         public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth;
+        public TacticalObjectData WoodObjectData => woodObjectData;
+        public TacticalObjectData CrateObjectData => crateObjectData;
+        public TacticalObjectData BombCrateObjectData => bombCrateObjectData;
     }
 }

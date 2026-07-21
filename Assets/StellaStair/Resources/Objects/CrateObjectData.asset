@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 737e3eedaba7462ea177d923b4171c5c, type: 3}
+  m_Name: CrateObjectData
+  m_EditorClassIdentifier: 
+  <DisplayName>k__BackingField: "\uC0C1\uC790"
+  <Description>k__BackingField: "\uBC00\uCE58\uAE30\uAC00 \uAC00\uB2A5\uD55C \uC0C1\uC790"
+  <MaxHealth>k__BackingField: 2
+  <Sprite>k__BackingField: {fileID: 21300000, guid: d2c51c16ae3c4efebe8670bc52ba56a9, type: 3}
+  <FunctionDescription>k__BackingField: "\uBC00\uCE58\uAE30, \uD30C\uAD34"
+  <Explosive>k__BackingField: 0
+  <ExplosionDamage>k__BackingField: 0

@@ -201,8 +201,6 @@ namespace StellaStair.Battle
                 stageCanvas.SetActive(false);
                 return;
             }
-
-            stageCanvas.SetActive(false);
             SetIntroElementVisible(stageNameLabel, false);
             SetIntroElementVisible(stageDescriptionLabel, false);
             if (stageStartButton != null)
@@ -246,7 +244,7 @@ namespace StellaStair.Battle
             var pan = camera.GetComponent<TacticalCameraPan>();
             if (pan == null)
                 pan = camera.gameObject.AddComponent<TacticalCameraPan>();
-            yield return pan.FocusOnPosition(center);
+            yield return pan.FocusOnPosition(center, 0.45f, true);
         }
 
         private static bool IsStageRootName(string value)
@@ -699,6 +697,8 @@ namespace StellaStair.Battle
             if (dialoguePresenter == null)
                 yield break;
 
+            var dialogueRoot = dialoguePresenter.DialogueRoot;
+            commonBattleUi?.SetSceneUiVisible(false, dialogueRoot);
             if (battle != null)
                 battle.PushInteractionLock();
             try
@@ -707,6 +707,7 @@ namespace StellaStair.Battle
             }
             finally
             {
+                commonBattleUi?.SetSceneUiVisible(true, dialogueRoot);
                 if (battle != null)
                     battle.PopInteractionLock();
             }

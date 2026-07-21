@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Archer
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
   <DisplayName>k__BackingField: Archer
+  <Description>k__BackingField: 
+  <StartingLevel>k__BackingField: 1
   <MovementPoints>k__BackingField: 5
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 3
@@ -116,11 +118,11 @@ MonoBehaviour:
     effectOffsets:
     - x: 0
       y: 0
-  <UnitSprite>k__BackingField: {fileID: 0}
+  <UnitSprite>k__BackingField: {fileID: -1495826415125420833, guid: fbe66098ad5d9e946b4d343eb32a38a7, type: 3}
   <AnimationPrefab>k__BackingField: {fileID: 0}
   <AnimationController>k__BackingField: {fileID: 0}
   <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
   <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}
-  <UnitWidthInCells>k__BackingField: 0.8
-  <UnitHeightInCells>k__BackingField: 1.2
+  <UnitWidthInCells>k__BackingField: 0.9
+  <UnitHeightInCells>k__BackingField: 2
   <DefaultFacingDirection>k__BackingField: 1

@@ -46,6 +46,7 @@ namespace StellaStair.Input
         private int facingPreviewOriginalDirection;
         private DeploymentManager subscribedDeployment;
         private TacticalCameraPan cameraPan;
+        private SelectedUnitInfoPresenter selectedUnitInfo;
         private Coroutine cameraFocusRoutine;
         private Vector3 cameraPositionBeforeSelection;
         private bool hasCameraPositionBeforeSelection;
@@ -119,6 +120,9 @@ namespace StellaStair.Input
                 deployment = FindAnyObjectByType<DeploymentManager>();
             if (highlighter == null)
                 highlighter = FindAnyObjectByType<GridHighlighter>();
+            if (selectedUnitInfo == null)
+                selectedUnitInfo = GetComponent<SelectedUnitInfoPresenter>() ??
+                    gameObject.AddComponent<SelectedUnitInfoPresenter>();
         }
 
         private void BindSceneButtonsIfMissing()
@@ -344,6 +348,8 @@ namespace StellaStair.Input
         {
             if (phase != BattlePhase.PlayerTurn)
                 ClearAttackPreview();
+            if (phase != BattlePhase.Deployment && phase != BattlePhase.PlayerTurn)
+                selectedUnitInfo?.Hide();
             RefreshSelectionDisplay();
             RefreshActionButtons();
         }
@@ -567,6 +573,7 @@ namespace StellaStair.Input
             if (!IsAttackMode && deployment.Board.IsWoodTile(terrainCell))
             {
                 ClearSelection();
+                selectedUnitInfo?.ShowWoodTile(deployment.Board, terrainCell);
                 highlighter.ShowWoodHealth(deployment.Board, terrainCell);
                 return;
             }
@@ -678,11 +685,13 @@ namespace StellaStair.Input
             }
             selected = unit;
             selected.SetSelectedHighlighted(true);
+            selectedUnitInfo?.Show(selected);
             if (deployment.Phase == BattlePhase.Deployment)
             {
                 if (unit.Team != UnitTeam.Player)
                 {
-                    ClearSelection();
+                    highlighter.Clear();
+                    RefreshActionButtons();
                     return;
                 }
                 var positions = new List<GridPosition>();
@@ -859,6 +868,7 @@ namespace StellaStair.Input
             }
             ClearMovePreview();
             selected = null;
+            selectedUnitInfo?.Hide();
             reachable = null;
             IsAttackMode = false;
             ClearAttackPreview();
@@ -1073,6 +1083,27 @@ namespace StellaStair.Input
                         AddPreviewAffectedUnit(unit);
                         AddPreviewDamage(unit, attacker.PiercingArrowDamage);
                     }
+                }
+                return;
+            }
+
+            if (!attackWoodOnly && attacker.IsThrustAttackPosition(origin, targetPosition))
+            {
+                var direction = targetPosition.X > origin.X ? 1 : -1;
+                for (var step = 1; step <= 2; step++)
+                {
+                    var position = new GridPosition(origin.X + direction * step, origin.Y);
+                    previewEffectPositions.Add(position);
+                    if (!deployment.Board.TryGetOccupant(position, out var unit) ||
+                        unit == null || unit == attacker)
+                        continue;
+
+                    AddPreviewAffectedUnit(unit);
+                    AddPreviewDamage(
+                        unit,
+                        step == 1 ? attacker.ThrustFrontDamage : attacker.ThrustBackDamage);
+                    if (attacker.ThrustHasKnockback)
+                        PreviewKnockback(unit, direction, 1);
                 }
                 return;
             }

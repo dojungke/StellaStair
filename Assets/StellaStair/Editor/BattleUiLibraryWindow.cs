@@ -2,10 +2,12 @@ using StellaStair.Battle;
 using StellaStair.Grid;
 using StellaStair.Input;
 using StellaStair.Presentation;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace StellaStair.Editor
 {
@@ -57,6 +59,7 @@ namespace StellaStair.Editor
         {
             EnsureActionUiInScene();
             EnsureLevelUpUiInScene();
+            EnsureSelectedUnitInfoUiInScene();
             DialogueUiBinder.BindCurrentSceneDialogueUi();
             selectedUi.CaptureCurrentScene();
             SaveRuntimePrefab(selectedUi);
@@ -101,6 +104,96 @@ namespace StellaStair.Editor
             }
             return null;
         }
+        [MenuItem("Stella Stair/Create Selected Unit Info UI In Current Scene")]
+        public static void EnsureSelectedUnitInfoUiInScene()
+        {
+            var panel = FindSceneSelectedUnitInfoPanel();
+            if (panel == null)
+            {
+                var canvas = Object.FindAnyObjectByType<Canvas>();
+                if (canvas == null)
+                {
+                    var canvasObject = new GameObject("Battle UI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                    Undo.RegisterCreatedObjectUndo(canvasObject, "Create Battle UI Canvas");
+                    canvas = canvasObject.GetComponent<Canvas>();
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    canvas.sortingOrder = 40;
+                    var scaler = canvasObject.GetComponent<CanvasScaler>();
+                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                    scaler.referenceResolution = new Vector2(1920f, 1080f);
+                }
+                panel = new GameObject("Selected Unit Info", typeof(RectTransform), typeof(Image));
+                Undo.RegisterCreatedObjectUndo(panel, "Create Selected Unit Info UI");
+                panel.transform.SetParent(canvas.transform, false);
+                var panelRect = panel.GetComponent<RectTransform>();
+                panelRect.anchorMin = new Vector2(0f, 0f);
+                panelRect.anchorMax = new Vector2(0f, 0f);
+                panelRect.pivot = new Vector2(0f, 0f);
+                panelRect.anchoredPosition = new Vector2(28f, 28f);
+                panelRect.sizeDelta = new Vector2(360f, 120f);
+            panel.transform.localScale = Vector3.one * 2f;
+                panel.GetComponent<Image>().color = new Color(0.035f, 0.045f, 0.065f, 0.94f);
+                CreateSelectedInfoImage(panel.transform);
+                CreateSelectedInfoLabel(panel.transform, "Name", 24, new Vector2(140f, -28f));
+                CreateSelectedInfoLabel(panel.transform, "Level", 19, new Vector2(140f, 4f));
+                CreateSelectedInfoLabel(panel.transform, "Experience", 17, new Vector2(140f, 36f));
+                panel.SetActive(false);
+            }
+
+            var input = Object.FindAnyObjectByType<TacticalInputController>();
+            if (input != null)
+            {
+                var presenter = input.GetComponent<SelectedUnitInfoPresenter>();
+                if (presenter == null)
+                    presenter = input.gameObject.AddComponent<SelectedUnitInfoPresenter>();
+                presenter.BindSceneUi(panel);
+                EditorUtility.SetDirty(presenter);
+            }
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Selection.activeGameObject = panel;
+        }
+
+        private static GameObject FindSceneSelectedUnitInfoPanel()
+        {
+            foreach (var rect in Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include))
+                if (rect != null && rect.name == "Selected Unit Info")
+                    return rect.gameObject;
+            return null;
+        }
+
+        private static void CreateSelectedInfoImage(Transform parent)
+        {
+            var imageObject = new GameObject("Portrait", typeof(RectTransform), typeof(Image));
+            Undo.RegisterCreatedObjectUndo(imageObject, "Create Selected Unit Portrait");
+            imageObject.transform.SetParent(parent, false);
+            var rect = imageObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(16f, 0f);
+            rect.sizeDelta = new Vector2(112f, 124f);
+            imageObject.GetComponent<Image>().preserveAspect = true;
+        }
+
+        private static void CreateSelectedInfoLabel(Transform parent, string objectName, int fontSize, Vector2 position)
+        {
+            var labelObject = new GameObject(objectName, typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(labelObject, "Create Selected Unit Label");
+            labelObject.transform.SetParent(parent, false);
+            var rect = labelObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(-156f, 30f);
+            var label = labelObject.AddComponent<TextMeshProUGUI>();
+            label.font = TMP_Settings.defaultFontAsset;
+            label.fontSize = fontSize;
+            label.color = Color.white;
+            label.enableWordWrapping = false;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+        }
+
         private static void EnsureLevelUpUiInScene()
         {
             var battle = Object.FindAnyObjectByType<DeploymentManager>();
@@ -117,6 +210,14 @@ namespace StellaStair.Editor
                 EditorSceneManager.MarkSceneDirty(presenter.gameObject.scene);
         }
 
+        private static bool IsDialogueUiRoot(GameObject root)
+        {
+            if (root == null)
+                return false;
+            var normalized = root.name.Replace(" ", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            return normalized.Contains("dialogue") || normalized.Contains("conversation") ||
+                   normalized.Contains("talk");
+        }
         private static void SaveRuntimePrefab(BattleUiData data)
         {
             var assetPath = AssetDatabase.GetAssetPath(data);
@@ -129,6 +230,8 @@ namespace StellaStair.Editor
             foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include))
             {
                 var root = canvas.transform.root.gameObject;
+                if (IsDialogueUiRoot(root))
+                    continue;
                 if (copiedRoots.Add(root))
                     Object.Instantiate(root, container.transform).name = root.name;
             }
@@ -149,6 +252,7 @@ namespace StellaStair.Editor
             selectedUi.ApplyToCurrentScene();
             EnsureActionUiInScene();
             EnsureLevelUpUiInScene();
+            EnsureSelectedUnitInfoUiInScene();
             DialogueUiBinder.BindCurrentSceneDialogueUi();
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             SceneView.RepaintAll();

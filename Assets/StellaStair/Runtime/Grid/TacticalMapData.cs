@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StellaStair.Battle;
+using StellaStair.Units;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -16,6 +17,25 @@ namespace StellaStair.Grid
             public Vector3Int position;
             public TileBase tile;
             public Color color = Color.white;
+        }
+
+        [Serializable]
+        public sealed class ObjectiveLayer
+        {
+            public TacticalObjectiveData data;
+            public Color color = Color.white;
+            public List<Cell> spawns = new();
+        }
+
+        [Serializable]
+        public sealed class EnemyUnitLayer
+        {
+            [Tooltip("Enemy UnitDefinition used by this spawn layer.")]
+            public UnitDefinition definition;
+            [Tooltip("Optional tilemap name. When empty, it is generated from the definition name.")]
+            public string layerName = string.Empty;
+            public Color color = new(0.9f, 0.18f, 0.12f, 0.75f);
+            public List<Cell> spawns = new();
         }
 
         [Serializable]
@@ -62,17 +82,33 @@ namespace StellaStair.Grid
         public List<Cell> defenseObjectives = new();
         public List<Cell> enemyGuardSpawns = new();
         public List<Cell> enemySoldierSpawns = new();
+        [Header("Enemy Unit Layers")]
+        [Tooltip("Add an entry for each enemy UnitDefinition that can be placed on this map.")]
+        public List<EnemyUnitLayer> enemyUnitLayers = new();
+        [Header("Objective Layers")]
+        public List<ObjectiveLayer> objectiveLayers = new();
+        public List<ObjectiveLayer> defenseObjectiveLayers = new();
         public string mapName = string.Empty;
         [TextArea(2, 5)] public string mapDescription = string.Empty;
+        // Legacy fields retained so older map assets continue to deserialize; use TacticalObjectiveData for new maps.
+        [HideInInspector] public string objectiveName = string.Empty;
+        [HideInInspector] public string objectiveDescription = string.Empty;
         public Sprite backgroundSprite;
         public Color backgroundTint = Color.white;
         public List<UiElement> uiElements = new();
         public List<Round> rounds = new();
         public TacticalStageType stageType = TacticalStageType.Elimination;
-        [Min(1)] public int attackObjectiveMaxHealth = 8;
-        [Min(1)] public int defenseObjectiveMaxHealth = 12;
-        public Sprite attackObjectiveSprite;
-        public Sprite defenseObjectiveSprite;
+        [HideInInspector, Min(1)] public int attackObjectiveMaxHealth = 8;
+        [HideInInspector, Min(1)] public int defenseObjectiveMaxHealth = 12;
+        [HideInInspector] public Sprite attackObjectiveSprite;
+        [HideInInspector] public Sprite defenseObjectiveSprite;
+        [Header("Objective Assets")]
+        public TacticalObjectiveData attackObjective;
+        public TacticalObjectiveData defenseObjective;
+        [Header("Object Assets")]
+        [HideInInspector] public TacticalObjectData woodObject;
+        [HideInInspector] public TacticalObjectData crateObject;
+        [HideInInspector] public TacticalObjectData bombCrateObject;
         [Min(1)] public int defenseTurnsToSurvive = 5;
         [Min(1)] public int escortTurnsToSurvive = 5;
         public string escortUnitProgressKey = string.Empty;
@@ -94,12 +130,17 @@ namespace StellaStair.Grid
             if (board == null)
                 return;
             board.ConfigureObjectiveSettings(
-                AttackObjectiveMaxHealth, DefenseObjectiveMaxHealth,
-                attackObjectiveSprite, defenseObjectiveSprite);
+                attackObjective != null ? attackObjective.MaxHealth : AttackObjectiveMaxHealth,
+                defenseObjective != null ? defenseObjective.MaxHealth : DefenseObjectiveMaxHealth,
+                attackObjective != null ? attackObjective.Sprite : attackObjectiveSprite,
+                defenseObjective != null ? defenseObjective.Sprite : defenseObjectiveSprite,
+                attackObjective, defenseObjective,
+                woodObject, crateObject, bombCrateObject);
             Restore(board.WalkableTilemap, walkable);
             Restore(board.PlayerDeploymentTilemap, playerDeployment);
             Restore(board.LadderTilemap, ladders);
             Restore(board.WoodTilemap, wood);
+            ApplySpriteOverride(board.WoodTilemap, woodObject != null ? woodObject.Sprite : null);
             var crateLayer = board.CrateTilemap;
             if (crateLayer == null && crates.Count > 0)
                 crateLayer = CreateLayer(board, "Crates", 18);
@@ -131,6 +172,96 @@ namespace StellaStair.Grid
             if (enemySoldierLayer == null && enemySoldierSpawns.Count > 0)
                 enemySoldierLayer = CreateLayer(board, "Enemy Soldier Spawns", 21);
             Restore(enemySoldierLayer, enemySoldierSpawns);
+            ApplyEnemyUnitLayers(board);
+            RemoveGeneratedObjectiveLayers(board);
+            ApplyObjectiveLayers(board, objectiveLayers, false);
+            ApplyObjectiveLayers(board, defenseObjectiveLayers, true);
+        }
+
+        public void RemoveGeneratedObjectiveLayers(TacticalBoard board)
+        {
+            if (board == null || board.Grid == null)
+                return;
+            var children = new List<Transform>();
+            foreach (Transform child in board.Grid.transform)
+            {
+                if (child == null || child.name == "Attack Objectives" || child.name == "Defense Objectives")
+                    continue;
+                if (child.name.EndsWith(" Objectives", StringComparison.Ordinal))
+                    children.Add(child);
+            }
+            foreach (var child in children)
+            {
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(child.gameObject);
+                else
+                    UnityEngine.Object.DestroyImmediate(child.gameObject);
+            }
+        }
+
+        private void ApplyObjectiveLayers(TacticalBoard board, List<ObjectiveLayer> layers, bool defense)
+        {
+            if (board == null || layers == null)
+                return;
+            foreach (var layer in layers)
+            {
+                if (layer == null || layer.data == null)
+                    continue;
+                var layerName = GetObjectiveLayerName(layer, defense);
+                var tilemap = FindLayer(board, layerName);
+                if (tilemap == null)
+                    tilemap = CreateLayer(board, layerName, 20);
+                Restore(tilemap, layer.spawns);
+                if (Application.isPlaying)
+                    board.ConfigureObjectiveLayer(tilemap, layer.data, defense);
+            }
+        }
+
+        private static string GetObjectiveLayerName(ObjectiveLayer layer, bool defense)
+        {
+            var name = layer != null && layer.data != null ? layer.data.name : "Objective";
+            return $"{name}{(defense ? " Defense" : string.Empty)} Objectives";
+        }
+
+        private void ApplyEnemyUnitLayers(TacticalBoard board)
+        {
+            if (board == null || enemyUnitLayers == null)
+                return;
+
+            foreach (var layer in enemyUnitLayers)
+            {
+                if (layer == null || layer.definition == null)
+                    continue;
+                var layerName = GetEnemyLayerName(layer);
+                var tilemap = FindLayer(board, layerName);
+                if (tilemap == null)
+                    tilemap = CreateEnemyLayer(board, layerName, layer.definition, layer.color);
+                Restore(tilemap, layer.spawns);
+                var marker = tilemap.GetComponent<EnemySpawnTilemap>();
+                if (marker == null)
+                    marker = tilemap.gameObject.AddComponent<EnemySpawnTilemap>();
+                marker.Configure(layer.definition, layer.color);
+            }
+        }
+
+        private static string GetEnemyLayerName(EnemyUnitLayer layer)
+        {
+            var definitionName = layer != null && layer.definition != null
+                ? layer.definition.name
+                : "Enemy";
+            return $"{definitionName} Spawns";
+        }
+        private static Tilemap CreateEnemyLayer(
+            TacticalBoard board, string layerName, UnitDefinition definition, Color color)
+        {
+            var tilemap = CreateLayer(board, layerName, 21);
+            if (tilemap == null)
+                return null;
+            var marker = tilemap.GetComponent<EnemySpawnTilemap>();
+            if (marker == null)
+                marker = tilemap.gameObject.AddComponent<EnemySpawnTilemap>();
+            marker.Configure(definition, color);
+            return tilemap;
         }
 
         public void ApplyUi()
@@ -172,6 +303,21 @@ namespace StellaStair.Grid
                 path = $"{transform.name}/{path}";
             }
             return path;
+        }
+
+        private static void ApplySpriteOverride(Tilemap tilemap, Sprite sprite)
+        {
+            if (tilemap == null || sprite == null)
+                return;
+            foreach (var position in tilemap.cellBounds.allPositionsWithin)
+            {
+                if (!tilemap.HasTile(position))
+                    continue;
+                var tile = ScriptableObject.CreateInstance<Tile>();
+                tile.sprite = sprite;
+                tile.color = tilemap.GetColor(position);
+                tilemap.SetTile(position, tile);
+            }
         }
 
         private static Tilemap FindLayer(TacticalBoard board, string layerName)

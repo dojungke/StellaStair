@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: EnemyGuard
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
   <DisplayName>k__BackingField: Enemy Guard
+  <Description>k__BackingField: "\uD14C\uC2A4\uD2B8 \uC720\uB2DB"
   <MovementPoints>k__BackingField: 4
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 3

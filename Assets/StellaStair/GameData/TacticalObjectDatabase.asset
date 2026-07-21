@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a84326fd6c0e62e478da50cb20ea42e1, type: 3}
   m_Name: TacticalObjectDatabase
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Grid.TacticalObjectDatabase
+  woodObjectData: {fileID: 11400000, guid: 6af12ed2f6d14309a1d6538b7b3b0a11, type: 2}
+  crateObjectData: {fileID: 11400000, guid: 9d05f0ed684f44f9a4d7f8c357f0b812, type: 2}
+  bombCrateObjectData: {fileID: 11400000, guid: f3d97d2a1a024f12a7b673ca3f0cb9e4, type: 2}
   woodMaxHealth: 2
   crateMaxHealth: 2
   bombCrateMaxHealth: 1

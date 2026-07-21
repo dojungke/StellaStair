@@ -36,6 +36,8 @@ namespace StellaStair.Presentation
             elements.Clear();
             foreach (var rect in FindUiElements())
             {
+                if (rect == null || IsDialogueUiPath(GetHierarchyPath(rect)))
+                    continue;
                 var saved = new Element
                 {
                     hierarchyPath = GetHierarchyPath(rect),
@@ -54,6 +56,23 @@ namespace StellaStair.Presentation
                     saved.tmpText = label.text;
                 }
                 elements.Add(saved);
+            }
+        }
+
+        public void SetSceneUiVisible(bool visible, GameObject excludedRoot = null)
+        {
+            var byPath = BuildElementLookup();
+            foreach (var saved in elements)
+            {
+                if (saved == null || !TryFindElement(byPath, saved.hierarchyPath, out var rect))
+                    continue;
+                if (excludedRoot != null &&
+                    (rect.gameObject == excludedRoot ||
+                     rect.transform.IsChildOf(excludedRoot.transform) ||
+                     excludedRoot.transform.IsChildOf(rect.transform)))
+                    continue;
+
+                rect.gameObject.SetActive(visible ? saved.active : false);
             }
         }
 
@@ -76,15 +95,18 @@ namespace StellaStair.Presentation
 
             if (!hasSavedUi && runtimeUiPrefab != null)
             {
-                UnityEngine.Object.Instantiate(runtimeUiPrefab).name = runtimeUiPrefab.name;
+                var instantiatedRuntimeUi = UnityEngine.Object.Instantiate(runtimeUiPrefab);
+                instantiatedRuntimeUi.name = runtimeUiPrefab.name;
                 if (keepSceneLevelUpUi)
                     RemoveInstantiatedLevelUpUpgradeUi(sceneLevelUpOverlays);
+                RemoveInstantiatedDialogueUi(instantiatedRuntimeUi);
                 byPath = BuildElementLookup();
             }
 
             foreach (var saved in elements)
             {
                 if (saved == null ||
+                    IsDialogueUiPath(saved.hierarchyPath) ||
                     keepSceneLevelUpUi && IsLevelUpUpgradeUiPath(saved.hierarchyPath) ||
                     !TryFindElement(byPath, saved.hierarchyPath, out var rect))
                     continue;
@@ -98,6 +120,16 @@ namespace StellaStair.Presentation
                 if (saved.hasTmpText && rect.TryGetComponent<TMP_Text>(out var label))
                     label.text = saved.tmpText;
                 rect.gameObject.SetActive(saved.active);
+            }
+        }
+        private static void RemoveInstantiatedDialogueUi(GameObject instantiatedRoot)
+        {
+            if (instantiatedRoot == null)
+                return;
+            foreach (var canvas in instantiatedRoot.GetComponentsInChildren<Canvas>(true))
+            {
+                if (canvas != null && IsDialogueUiName(canvas.name))
+                    DestroyUiObject(canvas.gameObject);
             }
         }
         private static HashSet<GameObject> GetSceneLevelUpUpgradeOverlays()
@@ -132,6 +164,22 @@ namespace StellaStair.Presentation
                 UnityEngine.Object.DestroyImmediate(target);
         }
 
+        private static bool IsDialogueUiPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return false;
+            var normalized = path.Replace(" ", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            return normalized.Contains("dialogue") || normalized.Contains("conversation") ||
+                   normalized.Contains("talk");
+        }
+        private static bool IsDialogueUiName(string value)
+        {
+            var normalized = string.IsNullOrEmpty(value)
+                ? string.Empty
+                : value.Replace(" ", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            return normalized.Contains("dialogue") || normalized.Contains("conversation") ||
+                   normalized.Contains("talk");
+        }
         private static bool IsLevelUpUpgradeUiPath(string path)
         {
             return !string.IsNullOrEmpty(path) &&

@@ -1,7 +1,7 @@
 {
   "name": "StellaStair.Editor",
   "rootNamespace": "StellaStair.Editor",
-  "references": ["StellaStair.Runtime", "Unity.ugui"],
+  "references": ["StellaStair.Runtime", "Unity.ugui", "Unity.TextMeshPro"],
   "includePlatforms": ["Editor"],
   "autoReferenced": true
 }

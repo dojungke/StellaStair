@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25c9aafd788acae4590b76ea09453dc1, type: 3}
+  m_Name: AttackObjectiveData
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Grid.TacticalObjectiveData
+  <DisplayName>k__BackingField: "\uC57D\uCD08"
+  <Description>k__BackingField: "\uD754\uD788 \uBC1C\uACAC\uB418\uB294 \uC57D\uCD08"
+  <MaxHealth>k__BackingField: 1
+  <Level>k__BackingField: 999
+  <Sprite>k__BackingField: {fileID: -355798565296084813, guid: 363ae99165992d448a089d81ecb1c014, type: 3}
