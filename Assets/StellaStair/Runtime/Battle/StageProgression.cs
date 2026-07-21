@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Presentation;
 using StellaStair.Units;
+using StellaStair.Town;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -28,7 +29,6 @@ namespace StellaStair.Battle
         [SerializeField] private bool waitForStageStartButton = true;
         [SerializeField] private bool avoidImmediateRepeat = true;
         [SerializeField] private bool autoAdvanceOnVictory = true;
-        [SerializeField, Min(0f)] private float advanceDelay = 1.5f;
 
         private static string lastStageName;
         private const int RoundSpawnSearchPadding = 8;
@@ -42,6 +42,7 @@ namespace StellaStair.Battle
         private bool startingBattleFromDialogue;
         private bool beforeBattleDialoguePlayed;
         private bool defeatDialogueStarted;
+        private TownHubPresenter townHub;
 
         public TacticalMapData CurrentStage { get; private set; }
         public IReadOnlyList<TacticalMapData> RegisteredStages => registeredStages;
@@ -270,6 +271,22 @@ namespace StellaStair.Battle
         }
         private TacticalMapData SelectRandomStage()
         {
+            if (!TownProgressState.FirstBattleCompleted)
+            {
+                TownProgressState.ConsumeSelectedStageName();
+                foreach (var stage in registeredStages)
+                    if (IsHerbGatheringStage(stage))
+                        return stage;
+                Debug.LogWarning("The fixed first stage '[연습] 약초 채집' is not registered. Falling back to the first stage.", this);
+                foreach (var stage in registeredStages)
+                    if (stage != null) return stage;
+            }
+
+            var requestedStageName = TownProgressState.ConsumeSelectedStageName();
+            if (!string.IsNullOrWhiteSpace(requestedStageName))
+                foreach (var stage in registeredStages)
+                    if (stage != null && string.Equals(stage.name, requestedStageName, System.StringComparison.OrdinalIgnoreCase))
+                        return stage;
             var available = new List<TacticalMapData>();
             foreach (var stage in registeredStages)
             {
@@ -285,6 +302,13 @@ namespace StellaStair.Battle
                     if (stage != null)
                         available.Add(stage);
             return available.Count > 0 ? available[Random.Range(0, available.Count)] : null;
+        }
+
+        private static bool IsHerbGatheringStage(TacticalMapData stage)
+        {
+            if (stage == null) return false;
+            return string.Equals(stage.name, "3213", System.StringComparison.OrdinalIgnoreCase) ||
+                   (!string.IsNullOrWhiteSpace(stage.DisplayName) && stage.DisplayName.Contains("약초 채집"));
         }
 
         private void OnPhaseChanged(BattlePhase phase)
@@ -393,6 +417,8 @@ namespace StellaStair.Battle
             SpawnChangedEnemies(
                 previous.enemySoldierSpawns, round.enemySoldierSpawns,
                 CurrentStage.enemySoldierSpawns, "EnemySoldier");
+            SpawnChangedEnemyLayers(
+                previous.enemyUnitLayers, round.enemyUnitLayers, CurrentStage.enemyUnitLayers);
             board.ResolveUnsupportedOccupants();
             previousRoundSnapshot = CloneRound(round);
             battle.RefreshEnemyIntentsForCurrentBoard();
@@ -496,6 +522,47 @@ namespace StellaStair.Battle
             List<TacticalMapData.Cell> baseMapSpawns,
             string definitionName)
         {
+            SpawnChangedEnemies(previous, next, baseMapSpawns,
+                Resources.Load<UnitDefinition>($"UnitDefinitions/{definitionName}"));
+        }
+
+        private void SpawnChangedEnemyLayers(
+            List<TacticalMapData.EnemyUnitLayer> previous,
+            List<TacticalMapData.EnemyUnitLayer> next,
+            List<TacticalMapData.EnemyUnitLayer> baseMapLayers)
+        {
+            if (next == null) return;
+            foreach (var layer in next)
+            {
+                if (layer == null || layer.definition == null) continue;
+                var previousLayer = FindEnemyLayer(previous, layer.definition);
+                var baseLayer = FindEnemyLayer(baseMapLayers, layer.definition);
+                SpawnChangedEnemies(
+                    previousLayer?.spawns, layer.spawns, baseLayer?.spawns, layer.definition);
+            }
+        }
+
+        private static TacticalMapData.EnemyUnitLayer FindEnemyLayer(
+            List<TacticalMapData.EnemyUnitLayer> layers, UnitDefinition definition)
+        {
+            if (layers == null || definition == null) return null;
+            foreach (var layer in layers)
+                if (layer != null && layer.definition == definition)
+                    return layer;
+            return null;
+        }
+
+        private void SpawnChangedEnemies(
+            List<TacticalMapData.Cell> previous,
+            List<TacticalMapData.Cell> next,
+            List<TacticalMapData.Cell> baseMapSpawns,
+            UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                Debug.LogWarning("Round spawn skipped because its UnitDefinition is missing.", this);
+                return;
+            }
             var previousByPosition = ToDictionary(previous);
             var baseByPosition = ToDictionary(baseMapSpawns);
             foreach (var pair in ToDictionary(next))
@@ -505,14 +572,15 @@ namespace StellaStair.Battle
                 if (previousByPosition.TryGetValue(pair.Key, out var oldCell) &&
                     oldCell.tile == pair.Value.tile && oldCell.color == pair.Value.color)
                     continue;
-                SpawnEnemy(pair.Value, definitionName);
+                SpawnEnemy(pair.Value, definition);
             }
         }
 
-        private void SpawnEnemy(TacticalMapData.Cell cell, string definitionName)
+        private void SpawnEnemy(TacticalMapData.Cell cell, UnitDefinition definition)
         {
-            if (battle == null || board == null || cell == null || cell.tile == null)
+            if (battle == null || board == null || cell == null || cell.tile == null || definition == null)
                 return;
+            var definitionName = definition.name;
             var requestedPosition = new GridPosition(cell.position.x, cell.position.y - 1);
             if (!TryFindSpawnPosition(requestedPosition, out var position))
             {
@@ -534,7 +602,7 @@ namespace StellaStair.Battle
             enemyObject.GetComponent<BoxCollider2D>().size = Vector2.one;
             var unit = enemyObject.AddComponent<TacticalUnit>();
             unit.Configure(
-                Resources.Load<UnitDefinition>($"UnitDefinitions/{definitionName}"),
+                definition,
                 UnitTeam.Enemy);
             if (!battle.RegisterEnemy(unit, position))
                 Destroy(enemyObject);
@@ -618,6 +686,9 @@ namespace StellaStair.Battle
             Copy(stage.bombCrates, round.bombCrates);
             Copy(stage.objectiveTargets, round.objectiveTargets);
             Copy(stage.defenseObjectives, round.defenseObjectives);
+            Copy(stage.enemyGuardSpawns, round.enemyGuardSpawns);
+            Copy(stage.enemySoldierSpawns, round.enemySoldierSpawns);
+            CopyEnemyLayers(stage.enemyUnitLayers, round.enemyUnitLayers);
             return round;
         }
 
@@ -639,7 +710,28 @@ namespace StellaStair.Battle
             Copy(source.defenseObjectives, clone.defenseObjectives);
             Copy(source.enemyGuardSpawns, clone.enemyGuardSpawns);
             Copy(source.enemySoldierSpawns, clone.enemySoldierSpawns);
+            CopyEnemyLayers(source.enemyUnitLayers, clone.enemyUnitLayers);
             return clone;
+        }
+
+        private static void CopyEnemyLayers(
+            List<TacticalMapData.EnemyUnitLayer> source,
+            List<TacticalMapData.EnemyUnitLayer> destination)
+        {
+            destination.Clear();
+            if (source == null) return;
+            foreach (var layer in source)
+            {
+                if (layer == null) continue;
+                var clone = new TacticalMapData.EnemyUnitLayer
+                {
+                    definition = layer.definition,
+                    layerName = layer.layerName,
+                    color = layer.color
+                };
+                Copy(layer.spawns, clone.spawns);
+                destination.Add(clone);
+            }
         }
 
         private static void Copy(List<TacticalMapData.Cell> source, List<TacticalMapData.Cell> destination)
@@ -665,8 +757,68 @@ namespace StellaStair.Battle
             advancing = true;
             yield return WaitForLevelUpSelectionRoutine();
             yield return PlayStageDialogueRoutine(TacticalDialogueTiming.AfterVictory);
+            if (!TownProgressState.FirstBattleCompleted && IsHerbGatheringStage(CurrentStage))
+                TownProgressState.CompleteFirstBattle();
             if (autoAdvanceOnVictory)
-                yield return AdvanceRoutine();
+                ShowTown();
+        }
+
+        private void ShowTown()
+        {
+            if (battle != null)
+                PlayerPartySpawner.SavePartyProgress(battle.PlayerUnits);
+            TownProgressState.AddGold(100);
+            townHub ??= GetComponent<TownHubPresenter>();
+            townHub ??= gameObject.AddComponent<TownHubPresenter>();
+            townHub.Show(registeredStages, battle != null ? battle.PlayerUnits : null, SelectStageFromTown, OnGuildOpened);
+        }
+
+        private void SelectStageFromTown(TacticalMapData stage)
+        {
+            if (stage == null) return;
+            TownProgressState.SelectStage(stage.name);
+            StartCoroutine(AdvanceRoutine());
+        }
+
+        private void OnGuildOpened()
+        {
+            dialogueDatabase ??= Resources.Load<TacticalDialogueDatabase>("TacticalDialogueDatabase");
+            if (dialogueDatabase == null ||
+                dialogueDatabase.GetLines(CurrentStage, TacticalDialogueTiming.GuildFirstVisit).Count == 0)
+            {
+                Debug.LogWarning("Guild first-visit dialogue has no playable lines. The event was not consumed.", this);
+                return;
+            }
+
+            if (TownProgressState.TryBeginGuildIntroduction())
+                StartCoroutine(GuildIntroductionRoutine());
+        }
+
+        private IEnumerator GuildIntroductionRoutine()
+        {
+            var presenter = EnsureDialoguePresenter();
+            var dialogueRoot = presenter != null ? presenter.DialogueRoot : null;
+            var activateStageCanvas = stageCanvas != null && !stageCanvas.activeSelf && dialogueRoot != null &&
+                (dialogueRoot == stageCanvas || dialogueRoot.transform.IsChildOf(stageCanvas.transform));
+            if (activateStageCanvas)
+            {
+                stageCanvas.SetActive(true);
+                HideStageIntroUiForDialogue();
+            }
+
+            townHub?.SetGuildDialogueMode(true, dialogueRoot);
+            try
+            {
+                yield return PlayStageDialogueRoutine(TacticalDialogueTiming.GuildFirstVisit);
+                TownProgressState.CompleteGuildIntroduction();
+            }
+            finally
+            {
+                if (activateStageCanvas)
+                    stageCanvas.SetActive(false);
+                townHub?.SetGuildDialogueMode(false);
+                townHub?.RefreshUnlockedParty();
+            }
         }
 
         private IEnumerator WaitForLevelUpSelectionRoutine()
@@ -733,8 +885,6 @@ namespace StellaStair.Battle
                 yield return null;
             if (battle != null)
                 PlayerPartySpawner.SavePartyProgress(battle.PlayerUnits);
-            if (advanceDelay > 0f)
-                yield return new WaitForSecondsRealtime(advanceDelay);
             var scene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(scene.name);
         }

@@ -13,7 +13,8 @@ namespace StellaStair.Presentation
         EnemyKilled,
         LevelUp,
         AllyHealed,
-        SkillUsed
+        SkillUsed,
+        GuildFirstVisit
     }
 
     public enum TacticalDialoguePortraitMode

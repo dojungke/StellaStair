@@ -1,20 +1,29 @@
 StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,LeftDirection,RightCharacter,RightPortrait,RightDirection,SkillKey,Duration
-[이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,Default,이리,Dark,Default,,
-[이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,Default,이리,Normal,Default,,
-[별] 테스트 2,BeforeBattle,3,이리,2234,마법사,Dark,Default,이리,Normal,Default,,
+[별] 테스트 2,BeforeBattle,3,이리,22345,마법사,Dark,Default,이리,Normal,Default,,
 [별] 테스트 2,BeforeBattle,4,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.213,마법사,Dark,Default,이리,Normal,Default,,
-*,BeforeBattle,1,이리,디버그,이리,Normal,Default,,Empty,Default,,
-*,AfterDefeat,1,Guide,디버그,Hero,Dark,Default,Enemy,Normal,Default,,
 [연습] 약초 채집,BeforeBattle,1,기사,거의 다 온것 같네 여기서 약초를 가져가자,기사,Normal,Flipped,,Empty,Default,,
 [연습] 약초 채집,BeforeBattle,2,,약초를 공격해서 채집하자,기사,Empty,Default,,Empty,Default,,
-[연습] 약초 채집,AfterVictory,1,기사,다 모았네 그럼 마을로 가자,기사,Normal,Flipped,,Empty,Default,,
+[연습] 약초 채집,AfterVictory,1,기사,넌 누구지?,기사,Normal,Flipped,궁수,Dark,Default,,
+[연습] 약초 채집,AfterVictory,2,궁수,자리요,기사,Dark,Flipped,궁수,Normal,Default,,
+[연습] 약초 채집,AfterVictory,3,,칼을 겨눈다.,기사,Normal,Flipped,궁수,Dark,Default,,
+[연습] 약초 채집,AfterVictory,4,,궁수가 합류했다.,기사,Dark,Flipped,궁수,Dark,Default,,
+[이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,Default,이리,Dark,Default,,
+[이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,Default,이리,Normal,Default,,
+*,BeforeBattle,1,이리,디버그,이리,Normal,Default,,Empty,Default,,
+*,AfterDefeat,1,Guide,디버그,Hero,Dark,Default,Enemy,Normal,Default,,
+*,GuildFirstVisit,1,마법사,길,마법사,Normal,Default,기사,Dark,Flipped,,
+*,GuildFirstVisit,2,,칼을 겨눈다,마법사,Dark,Default,기사,Normal,Flipped,,
+*,GuildFirstVisit,3,마법사,이야기 고리의 현자인 내게 그런 유치한 협박이 통할것 같나?,마법사,Normal,Default,기사,Dark,Flipped,,
+*,GuildFirstVisit,4,,활을 겨눈다,마법사,Dark,Default,궁수,Normal,Default,,
+*,GuildFirstVisit,5,,마법사가 합류했다,마법사,Dark,Default,궁수,Dark,Default,,
+*,GuildFirstVisit,6,,다음 퀘스트를 고르자,마법사,Dark,Default,궁수,Dark,Default,,
 *,EnemyKilled,1,Archer,크리티컬!,,,,,,,BasicAttack,2.2
 *,SkillUsed,1,Archer,이 작살엔 필살의 집념이 담겨있지!,,,,,,,Harpoon,1
 *,EnemyKilled,1,Archer,작살냈어요!,,,,,,,Harpoon,2.2
 *,LevelUp,1,Archer,강해졌어요!,,,,,,,,1
 *,AllyHealed,1,Archer,편히는 못갈거예요.,,,,,,,,2.2
 *,SkillUsed,1,Archer,길을 열겠습니다,,,,,,,PiercingArrow,1
-*,EnemyKilled,1,Knight,잘가라!,,,,,,,,2.2
+*,EnemyKilled,1,Knight,잘가라!,,,,,,,BasicAttack,2.2
 *,LevelUp,1,Knight,한걸음더,,,,,,,,1
 *,SkillUsed,1,Knight,찔리는데 있나?,,,,,,,Thrust,1
 *,EnemyKilled,1,Wizard,디버그(벌레컷),,,,,,,,2.2

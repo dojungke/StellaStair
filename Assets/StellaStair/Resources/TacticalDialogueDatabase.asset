@@ -19,6 +19,8 @@ MonoBehaviour:
     normalSprite: {fileID: -5565481537080689747, guid: 171c9e0e8de2dc249aec64b9e90c4163, type: 3}
   - characterId: "\uAE30\uC0AC"
     normalSprite: {fileID: -7057413313501814570, guid: f0dc09ba5968c5045a7d8e8caa50bf6c, type: 3}
+  - characterId: "\uAD81\uC218"
+    normalSprite: {fileID: -1495826415125420833, guid: fbe66098ad5d9e946b4d343eb32a38a7, type: 3}
   lines:
   - stageKey: '*'
     timing: 0
@@ -29,123 +31,6 @@ MonoBehaviour:
     text: "\uB514\uBC84\uADF8"
     leftCharacterId: "\uC774\uB9AC"
     leftPortrait: 1
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 29
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 30
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 31
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 32
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 33
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 34
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 35
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 36
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 37
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
     leftDirection: 0
     rightCharacterId: 
     rightPortrait: 0
@@ -203,6 +88,123 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 42
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 43
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 44
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 45
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 46
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 47
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 48
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 49
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 50
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
     timing: 2
     duration: 2.2
     order: 1
@@ -233,9 +235,8 @@ MonoBehaviour:
     duration: 2.2
     order: 1
     speakerName: Wizard
-    skillKey: BasicAttack
-    text: "\uC0C8\uBE68\uAC1B\uACE0 \uC544\uB984\uB2E4\uC6B4 \uBD88\uAF43\uB180\uC774\uAC00
-      \uB418\uC5B4\uB77C!"
+    skillKey: BombCrate
+    text: "\uC775\uC2A4\uD50C\uB85C\uC83C!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -247,8 +248,9 @@ MonoBehaviour:
     duration: 2.2
     order: 1
     speakerName: Wizard
-    skillKey: BombCrate
-    text: "\uC775\uC2A4\uD50C\uB85C\uC83C!"
+    skillKey: BasicAttack
+    text: "\uC0C8\uBE68\uAC1B\uACE0 \uC544\uB984\uB2E4\uC6B4 \uBD88\uAF43\uB180\uC774\uAC00
+      \uB418\uC5B4\uB77C!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -272,19 +274,6 @@ MonoBehaviour:
     timing: 3
     duration: 2.2
     order: 1
-    speakerName: Knight
-    skillKey: 
-    text: "\uC798\uAC00\uB77C!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 3
-    duration: 2.2
-    order: 1
     speakerName: Wizard
     skillKey: Fireball
     text: "\uB728\uAC70\uC6B8\uAC70\uB2E4! \uC880 \uB9CE\uC774!"
@@ -298,9 +287,9 @@ MonoBehaviour:
     timing: 3
     duration: 2.2
     order: 1
-    speakerName: Archer
-    skillKey: Harpoon
-    text: "\uC791\uC0B4\uB0C8\uC5B4\uC694!"
+    speakerName: Knight
+    skillKey: BasicAttack
+    text: "\uC798\uAC00\uB77C!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -321,12 +310,25 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Archer
+    skillKey: Harpoon
+    text: "\uC791\uC0B4\uB0C8\uC5B4\uC694!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
     timing: 4
     duration: 1
     order: 1
-    speakerName: Wizard
+    speakerName: Archer
     skillKey: 
-    text: "\uB530\uB77C\uC62C \uC218 \uC788\uACA0\uB098?"
+    text: "\uAC15\uD574\uC84C\uC5B4\uC694!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -350,22 +352,9 @@ MonoBehaviour:
     timing: 4
     duration: 1
     order: 1
-    speakerName: Archer
-    skillKey: 
-    text: "\uAC15\uD574\uC84C\uC5B4\uC694!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 5
-    duration: 2.2
-    order: 1
     speakerName: Wizard
     skillKey: 
-    text: "\uB10C \uAC15\uD574\uC84C\uB2E4 \uB3CC\uACA9\uD574!"
+    text: "\uB530\uB77C\uC62C \uC218 \uC788\uACA0\uB098?"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -386,38 +375,12 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
-    timing: 6
-    duration: 1
+    timing: 5
+    duration: 2.2
     order: 1
     speakerName: Wizard
-    skillKey: IceSpike
-    text: "\uC5BC\uC74C\uBCBD\uC744 \uC138\uC6B8\uAC8C\uC694!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 6
-    duration: 1
-    order: 1
-    speakerName: Wizard
-    skillKey: Fireball
-    text: "\uBB47\uBCC4\uC744 \uD0DC\uC6B0\uB294 \uC11C\uAD11\uC744 \uB0B4\uB824\uC8FC\uB9C8"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 6
-    duration: 1
-    order: 1
-    speakerName: Knight
-    skillKey: Thrust
-    text: "\uCC14\uB9AC\uB294\uB370 \uC788\uB098?"
+    skillKey: 
+    text: "\uB10C \uAC15\uD574\uC84C\uB2E4 \uB3CC\uACA9\uD574!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -454,6 +417,45 @@ MonoBehaviour:
     timing: 6
     duration: 1
     order: 1
+    speakerName: Knight
+    skillKey: Thrust
+    text: "\uCC14\uB9AC\uB294\uB370 \uC788\uB098?"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 6
+    duration: 1
+    order: 1
+    speakerName: Wizard
+    skillKey: Fireball
+    text: "\uBB47\uBCC4\uC744 \uD0DC\uC6B0\uB294 \uC11C\uAD11\uC744 \uB0B4\uB824\uC8FC\uB9C8"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 6
+    duration: 1
+    order: 1
+    speakerName: Wizard
+    skillKey: IceSpike
+    text: "\uC5BC\uC74C\uBCBD\uC744 \uC138\uC6B8\uAC8C\uC694!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 6
+    duration: 1
+    order: 1
     speakerName: Wizard
     skillKey: NatureFragrance
     text: "\uAD1C\uCC2E\uC544 \uC790\uC5F0\uC2A4\uB7EC\uC6E0\uC5B4"
@@ -463,13 +465,92 @@ MonoBehaviour:
     rightCharacterId: 
     rightPortrait: 0
     rightDirection: 0
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 1
+    speakerName: "\uB9C8\uBC95\uC0AC"
+    skillKey: 
+    text: "\uAE38"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    leftDirection: 0
+    rightCharacterId: "\uAE30\uC0AC"
+    rightPortrait: 2
+    rightDirection: 1
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 2
+    speakerName: 
+    skillKey: 
+    text: "\uCE7C\uC744 \uACA8\uB208\uB2E4"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    leftDirection: 0
+    rightCharacterId: "\uAE30\uC0AC"
+    rightPortrait: 1
+    rightDirection: 1
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 3
+    speakerName: "\uB9C8\uBC95\uC0AC"
+    skillKey: 
+    text: "\uC774\uC57C\uAE30 \uACE0\uB9AC\uC758 \uD604\uC790\uC778 \uB0B4\uAC8C
+      \uADF8\uB7F0 \uC720\uCE58\uD55C \uD611\uBC15\uC774 \uD1B5\uD560\uAC83 \uAC19\uB098?"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 1
+    leftDirection: 0
+    rightCharacterId: "\uAE30\uC0AC"
+    rightPortrait: 2
+    rightDirection: 1
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 4
+    speakerName: 
+    skillKey: 
+    text: "\uD65C\uC744 \uACA8\uB208\uB2E4"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    leftDirection: 0
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 1
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 5
+    speakerName: 
+    skillKey: 
+    text: "\uB9C8\uBC95\uC0AC\uAC00 \uD569\uB958\uD588\uB2E4"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    leftDirection: 0
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 2
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 7
+    duration: 2.2
+    order: 6
+    speakerName: 
+    skillKey: 
+    text: "\uB2E4\uC74C \uD018\uC2A4\uD2B8\uB97C \uACE0\uB974\uC790"
+    leftCharacterId: "\uB9C8\uBC95\uC0AC"
+    leftPortrait: 2
+    leftDirection: 0
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 2
+    rightDirection: 0
   - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
     timing: 0
     duration: 2.2
     order: 3
     speakerName: "\uC774\uB9AC"
     skillKey: 
-    text: 2234
+    text: 22345
     leftCharacterId: "\uB9C8\uBC95\uC0AC"
     leftPortrait: 2
     leftDirection: 0
@@ -523,12 +604,51 @@ MonoBehaviour:
     order: 1
     speakerName: "\uAE30\uC0AC"
     skillKey: 
-    text: "\uB2E4 \uBAA8\uC558\uB124 \uADF8\uB7FC \uB9C8\uC744\uB85C \uAC00\uC790"
+    text: "\uB10C \uB204\uAD6C\uC9C0?"
     leftCharacterId: "\uAE30\uC0AC"
     leftPortrait: 1
     leftDirection: 1
-    rightCharacterId: 
-    rightPortrait: 0
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 2
+    rightDirection: 0
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 1
+    duration: 2.2
+    order: 2
+    speakerName: "\uAD81\uC218"
+    skillKey: 
+    text: "\uC790\uB9AC\uC694"
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 2
+    leftDirection: 1
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 1
+    rightDirection: 0
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 1
+    duration: 2.2
+    order: 3
+    speakerName: 
+    skillKey: 
+    text: "\uCE7C\uC744 \uACA8\uB208\uB2E4."
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 1
+    leftDirection: 1
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 2
+    rightDirection: 0
+  - stageKey: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+    timing: 1
+    duration: 2.2
+    order: 4
+    speakerName: 
+    skillKey: 
+    text: "\uAD81\uC218\uAC00 \uD569\uB958\uD588\uB2E4."
+    leftCharacterId: "\uAE30\uC0AC"
+    leftPortrait: 2
+    leftDirection: 1
+    rightCharacterId: "\uAD81\uC218"
+    rightPortrait: 2
     rightDirection: 0
   - stageKey: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
     timing: 0

@@ -70,6 +70,7 @@ namespace StellaStair.Grid
             public List<Cell> defenseObjectives = new();
             public List<Cell> enemyGuardSpawns = new();
             public List<Cell> enemySoldierSpawns = new();
+            public List<EnemyUnitLayer> enemyUnitLayers = new();
         }
 
         public List<Cell> walkable = new();
@@ -172,6 +173,7 @@ namespace StellaStair.Grid
             if (enemySoldierLayer == null && enemySoldierSpawns.Count > 0)
                 enemySoldierLayer = CreateLayer(board, "Enemy Soldier Spawns", 21);
             Restore(enemySoldierLayer, enemySoldierSpawns);
+            RemoveUnusedEnemyUnitLayers(board);
             ApplyEnemyUnitLayers(board);
             RemoveGeneratedObjectiveLayers(board);
             ApplyObjectiveLayers(board, objectiveLayers, false);
@@ -223,6 +225,38 @@ namespace StellaStair.Grid
             return $"{name}{(defense ? " Defense" : string.Empty)} Objectives";
         }
 
+        private void RemoveUnusedEnemyUnitLayers(TacticalBoard board)
+        {
+            if (board == null || board.Grid == null)
+                return;
+
+            var desiredNames = new HashSet<string>();
+            if (enemyUnitLayers != null)
+            {
+                foreach (var layer in enemyUnitLayers)
+                    if (layer != null && layer.definition != null)
+                        desiredNames.Add(GetEnemyLayerName(layer));
+            }
+
+            var obsoleteLayers = new List<GameObject>();
+            foreach (Transform child in board.Grid.transform)
+            {
+                if (child == null || child.name == "Enemy Guard Spawns" ||
+                    child.name == "Enemy Soldier Spawns")
+                    continue;
+                if (child.GetComponent<EnemySpawnTilemap>() != null &&
+                    !desiredNames.Contains(child.name))
+                    obsoleteLayers.Add(child.gameObject);
+            }
+
+            foreach (var obsoleteLayer in obsoleteLayers)
+            {
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(obsoleteLayer);
+                else
+                    UnityEngine.Object.DestroyImmediate(obsoleteLayer);
+            }
+        }
         private void ApplyEnemyUnitLayers(TacticalBoard board)
         {
             if (board == null || enemyUnitLayers == null)

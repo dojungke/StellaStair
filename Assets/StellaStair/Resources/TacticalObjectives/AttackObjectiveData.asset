@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Grid.TacticalObjectiveData
   <DisplayName>k__BackingField: "\uC57D\uCD08"
   <Description>k__BackingField: "\uD754\uD788 \uBC1C\uACAC\uB418\uB294 \uC57D\uCD08"
+  <FunctionDescription>k__BackingField: "\uBAA8\uB450 \uD30C\uAD34\uC2DC \uC804\uD22C
+    \uC2B9\uB9AC"
   <MaxHealth>k__BackingField: 1
   <Level>k__BackingField: 999
   <Sprite>k__BackingField: {fileID: -355798565296084813, guid: 363ae99165992d448a089d81ecb1c014, type: 3}

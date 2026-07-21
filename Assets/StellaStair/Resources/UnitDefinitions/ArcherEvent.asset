@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf5bfe9903dd5aa469c63830ecd4b9fe, type: 3}
+  m_Name: ArcherEvent
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
+  <DisplayName>k__BackingField: Archer
+  <Description>k__BackingField: "\uD29C\uD210\uC6A9 \uACF5\uACA9 \uC548\uD558\uB294
+    \uAD81\uC218"
+  <StartingLevel>k__BackingField: 1
+  <MovementPoints>k__BackingField: 1
+  <MoveSpeed>k__BackingField: 5
+  <MaxHealth>k__BackingField: 999
+  <AttackDamage>k__BackingField: 1
+  <AttackDistanceRule>k__BackingField: 1
+  <MinimumAttackRange>k__BackingField: 99
+  <AttackRange>k__BackingField: 1
+  <VerticalAttackRange>k__BackingField: 0
+  <KnockbackDistance>k__BackingField: 1
+  <CanPierceUnits>k__BackingField: 1
+  <AreaKnockbackRadius>k__BackingField: 0
+  <AreaKnockbackDistance>k__BackingField: 0
+  attackTargetOffsets: []
+  attackEffectOffsets: []
+  attackModeRanges:
+  - attackMode: BowStrike
+    targetOffsets:
+    - x: -1
+      y: 1
+    - x: 0
+      y: 1
+    - x: 1
+      y: 1
+    - x: -1
+      y: 0
+    - x: 1
+      y: 0
+    - x: -1
+      y: -1
+    - x: 0
+      y: -1
+    - x: 1
+      y: -1
+    effectOffsets:
+    - x: 0
+      y: 0
+  - attackMode: Harpoon
+    targetOffsets:
+    - x: -4
+      y: 1
+    - x: -3
+      y: 1
+    - x: -2
+      y: 1
+    - x: 2
+      y: 1
+    - x: 3
+      y: 1
+    - x: 4
+      y: 1
+    - x: -4
+      y: 0
+    - x: -3
+      y: 0
+    - x: -2
+      y: 0
+    - x: 2
+      y: 0
+    - x: 3
+      y: 0
+    - x: 4
+      y: 0
+    - x: -4
+      y: -1
+    - x: -3
+      y: -1
+    - x: -2
+      y: -1
+    - x: 2
+      y: -1
+    - x: 3
+      y: -1
+    - x: 4
+      y: -1
+    effectOffsets:
+    - x: 0
+      y: 0
+  <UnitSprite>k__BackingField: {fileID: -1495826415125420833, guid: fbe66098ad5d9e946b4d343eb32a38a7, type: 3}
+  <AnimationPrefab>k__BackingField: {fileID: 0}
+  <AnimationController>k__BackingField: {fileID: 0}
+  <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
+  <AnimationLocalScale>k__BackingField: {x: 1, y: 1, z: 1}
+  <UnitWidthInCells>k__BackingField: 0.9
+  <UnitHeightInCells>k__BackingField: 2
+  <DefaultFacingDirection>k__BackingField: 1

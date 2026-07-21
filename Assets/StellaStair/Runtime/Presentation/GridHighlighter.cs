@@ -10,6 +10,8 @@ namespace StellaStair.Presentation
         [SerializeField] private Color reachableColor = new(0.15f, 0.75f, 1f, 0.35f);
         [SerializeField] private Color selectedColor = new(1f, 0.85f, 0.15f, 0.6f);
         [SerializeField] private Color attackColor = new(1f, 0.2f, 0.15f, 0.55f);
+        [SerializeField] private Color blockedAttackRangeColor = new(0.35f, 0.08f, 0.12f, 0.22f);
+        [SerializeField] private Color blockedMovementRangeColor = new(0.08f, 0.3f, 0.38f, 0.24f);
         [SerializeField] private Color impactColor = new(1f, 0.55f, 0.05f, 0.9f);
         [SerializeField] private Color knockbackColor = new(1f, 0.9f, 0.1f, 0.9f);
         [SerializeField] private Color collisionColor = new(0.85f, 0.1f, 1f, 0.95f);
@@ -30,7 +32,8 @@ namespace StellaStair.Presentation
             }
         }
 
-        public void Show(TacticalBoard board, IEnumerable<GridPosition> positions, GridPosition? selected = null)
+        public void Show(TacticalBoard board, IEnumerable<GridPosition> positions,
+            GridPosition? selected = null, IEnumerable<GridPosition> blockedMovementPositions = null)
         {
             Clear();
             EnsureSprite();
@@ -40,12 +43,16 @@ namespace StellaStair.Presentation
                     continue;
                 CreateMarker(board, position, reachableColor);
             }
+            ShowBlocked(board, blockedMovementPositions, blockedMovementRangeColor);
         }
 
         public void Show(TacticalBoard board, IEnumerable<GridPosition> positions,
-            IEnumerable<GridPosition> attackPositions, GridPosition selected)
+            IEnumerable<GridPosition> attackPositions, GridPosition selected,
+            IEnumerable<GridPosition> blockedAttackPositions = null,
+            IEnumerable<GridPosition> blockedMovementPositions = null)
         {
-            Show(board, positions, selected);
+            Show(board, positions, selected, blockedMovementPositions);
+            ShowBlocked(board, blockedAttackPositions, blockedAttackRangeColor);
             foreach (var position in attackPositions)
                 CreateMarker(board, position, attackColor);
         }
@@ -57,7 +64,9 @@ namespace StellaStair.Presentation
             IEnumerable<GridPosition> reachablePositions = null,
             IEnumerable<GridPosition> attackablePositions = null,
             IReadOnlyDictionary<TacticalUnit, GridPosition> knockbackGhostDestinations = null,
-            IEnumerable<GridPosition> effectPositions = null)
+            IEnumerable<GridPosition> effectPositions = null,
+            IEnumerable<GridPosition> blockedAttackPositions = null,
+            IEnumerable<GridPosition> blockedMovementPositions = null)
         {
             Clear();
             EnsureSprite();
@@ -74,6 +83,8 @@ namespace StellaStair.Presentation
                 }
             }
 
+            ShowBlocked(board, blockedMovementPositions, blockedMovementRangeColor);
+            ShowBlocked(board, blockedAttackPositions, blockedAttackRangeColor);
             if (effectPositions != null)
             {
                 foreach (var position in effectPositions)
@@ -122,7 +133,8 @@ namespace StellaStair.Presentation
         }
 
         public void ShowMovePreview(TacticalBoard board, IEnumerable<GridPosition> reachablePositions,
-            GridPosition selected, GridPosition destination, TacticalUnit previewUnit = null)
+            GridPosition selected, GridPosition destination, TacticalUnit previewUnit = null,
+            IEnumerable<GridPosition> blockedMovementPositions = null)
         {
             Clear();
             EnsureSprite();
@@ -134,6 +146,7 @@ namespace StellaStair.Presentation
                     continue;
                 CreateMarker(board, position, fadedReachableColor);
             }
+            ShowBlocked(board, blockedMovementPositions, blockedMovementRangeColor);
             if (!TryCreateMovePreviewGhost(board, destination, previewUnit))
                 CreateMarker(board, destination, knockbackColor);
         }
@@ -211,7 +224,9 @@ namespace StellaStair.Presentation
             IEnumerable<GridPosition> collisionPositions,
             IEnumerable<GridPosition> voidPositions,
             TacticalUnit previewUnit = null,
-            IReadOnlyDictionary<TacticalUnit, GridPosition> knockbackGhostDestinations = null)
+            IReadOnlyDictionary<TacticalUnit, GridPosition> knockbackGhostDestinations = null,
+            IEnumerable<GridPosition> blockedAttackPositions = null,
+            IEnumerable<GridPosition> blockedMovementPositions = null)
         {
             Clear();
             EnsureSprite();
@@ -224,6 +239,8 @@ namespace StellaStair.Presentation
                     CreateMarker(board, position, fadedReachableColor);
             }
 
+            ShowBlocked(board, blockedMovementPositions, blockedMovementRangeColor);
+            ShowBlocked(board, blockedAttackPositions, blockedAttackRangeColor);
             var fadedAttackColor = attackColor;
             fadedAttackColor.a *= 0.45f;
             foreach (var position in attackablePositions)
@@ -267,6 +284,13 @@ namespace StellaStair.Presentation
             markerSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
         }
 
+        private void ShowBlocked(TacticalBoard board, IEnumerable<GridPosition> positions, Color color)
+        {
+            if (positions == null)
+                return;
+            foreach (var position in positions)
+                CreateMarker(board, position, color, 0.82f);
+        }
         private void CreateMarker(TacticalBoard board, GridPosition position, Color color, float scale = 0.92f)
         {
             CreateMarkerAtWorld(

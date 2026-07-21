@@ -88,9 +88,6 @@ MonoBehaviour:
   - position: {x: 1, y: 4, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
-  - position: {x: 2, y: 4, z: 0}
-    tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
-    color: {r: 1, g: 1, b: 1, a: 1}
   - position: {x: 3, y: 4, z: 0}
     tile: {fileID: 11400000, guid: 37ef9e6ab31777e44b79b87606caede1, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -114,16 +111,16 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 739b68adf53997a4a9e94afc261830c0, type: 2}
     color: {r: 0.1, g: 0.55, b: 0.85, a: 0.35}
   ladders:
-  - position: {x: 5, y: 1, z: 0}
+  - position: {x: 2, y: 1, z: 0}
     tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
-  - position: {x: 5, y: 2, z: 0}
+  - position: {x: 2, y: 2, z: 0}
     tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
-  - position: {x: 5, y: 3, z: 0}
+  - position: {x: 2, y: 3, z: 0}
     tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
-  - position: {x: 5, y: 4, z: 0}
+  - position: {x: 2, y: 4, z: 0}
     tile: {fileID: 11400000, guid: fca893e4c8e7d12478e41630e0bd1f68, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
   wood: []
@@ -133,7 +130,14 @@ MonoBehaviour:
   defenseObjectives: []
   enemyGuardSpawns: []
   enemySoldierSpawns: []
-  enemyUnitLayers: []
+  enemyUnitLayers:
+  - definition: {fileID: 11400000, guid: da1aff8ffdcca714384c51365da9215e, type: 2}
+    layerName: 
+    color: {r: 0.9, g: 0.18, b: 0.12, a: 0.75}
+    spawns:
+    - position: {x: -4, y: 5, z: 0}
+      tile: {fileID: 11400000, guid: 982934dcff9d7a64c991fee7cd691876, type: 2}
+      color: {r: 0.75, g: 0.15, b: 0.2, a: 0.75}
   objectiveLayers:
   - data: {fileID: 11400000, guid: 111cb5a78bdcaab4998ffe17c86e1942, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -162,6 +166,9 @@ MonoBehaviour:
   defenseObjectiveSprite: {fileID: 0}
   attackObjective: {fileID: 11400000, guid: 111cb5a78bdcaab4998ffe17c86e1942, type: 2}
   defenseObjective: {fileID: 0}
+  woodObject: {fileID: 0}
+  crateObject: {fileID: 0}
+  bombCrateObject: {fileID: 0}
   defenseTurnsToSurvive: 5
   escortTurnsToSurvive: 5
   escortUnitProgressKey: 

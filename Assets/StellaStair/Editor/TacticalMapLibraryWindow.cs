@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using StellaStair.Battle;
 using StellaStair.Grid;
+using StellaStair.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -391,6 +392,7 @@ namespace StellaStair.Editor
             CopyCells(selectedMap.playerDeployment, round.playerDeployment);
             CopyCells(selectedMap.ladders, round.ladders);
             CopyCells(selectedMap.wood, round.wood);
+            SyncRoundEnemyLayers(selectedMap.enemyUnitLayers, round.enemyUnitLayers);
         }
 
         private static TacticalMapData.Round CloneRound(TacticalMapData.Round source)
@@ -411,7 +413,69 @@ namespace StellaStair.Editor
             CopyCells(source.defenseObjectives, clone.defenseObjectives);
             CopyCells(source.enemyGuardSpawns, clone.enemyGuardSpawns);
             CopyCells(source.enemySoldierSpawns, clone.enemySoldierSpawns);
+            CopyEnemyLayers(source.enemyUnitLayers, clone.enemyUnitLayers);
             return clone;
+        }
+
+        private static void SyncRoundEnemyLayers(
+            List<TacticalMapData.EnemyUnitLayer> mapLayers,
+            List<TacticalMapData.EnemyUnitLayer> roundLayers)
+        {
+            if (roundLayers == null) return;
+            var existing = new Dictionary<UnitDefinition, TacticalMapData.EnemyUnitLayer>();
+            foreach (var layer in roundLayers)
+                if (layer != null && layer.definition != null)
+                    existing[layer.definition] = layer;
+
+            roundLayers.Clear();
+            if (mapLayers == null) return;
+            foreach (var mapLayer in mapLayers)
+            {
+                if (mapLayer == null || mapLayer.definition == null) continue;
+                if (!existing.TryGetValue(mapLayer.definition, out var roundLayer))
+                    roundLayer = new TacticalMapData.EnemyUnitLayer();
+                roundLayer.definition = mapLayer.definition;
+                roundLayer.layerName = mapLayer.layerName;
+                roundLayer.color = mapLayer.color;
+                roundLayers.Add(roundLayer);
+            }
+        }
+
+        private static void CopyEnemyLayers(
+            List<TacticalMapData.EnemyUnitLayer> source,
+            List<TacticalMapData.EnemyUnitLayer> destination)
+        {
+            destination.Clear();
+            if (source == null) return;
+            foreach (var layer in source)
+            {
+                if (layer == null) continue;
+                var clone = new TacticalMapData.EnemyUnitLayer
+                {
+                    definition = layer.definition,
+                    layerName = layer.layerName,
+                    color = layer.color
+                };
+                CopyCells(layer.spawns, clone.spawns);
+                destination.Add(clone);
+            }
+        }
+
+        private static void RemoveBaseMapEnemyCells(
+            List<TacticalMapData.EnemyUnitLayer> roundLayers,
+            List<TacticalMapData.EnemyUnitLayer> mapLayers)
+        {
+            if (roundLayers == null || mapLayers == null) return;
+            foreach (var roundLayer in roundLayers)
+            {
+                if (roundLayer == null || roundLayer.definition == null) continue;
+                foreach (var mapLayer in mapLayers)
+                {
+                    if (mapLayer == null || mapLayer.definition != roundLayer.definition) continue;
+                    RemoveBaseMapCells(roundLayer.spawns, mapLayer.spawns);
+                    break;
+                }
+            }
         }
 
         private static void CopyCells(
@@ -551,6 +615,9 @@ namespace StellaStair.Editor
             Capture(FindLayer(board, "Enemy Soldier Spawns"), round.enemySoldierSpawns);
             RemoveBaseMapCells(round.enemyGuardSpawns, selectedMap.enemyGuardSpawns);
             RemoveBaseMapCells(round.enemySoldierSpawns, selectedMap.enemySoldierSpawns);
+            SyncRoundEnemyLayers(selectedMap.enemyUnitLayers, round.enemyUnitLayers);
+            CaptureEnemyUnitLayers(board, round.enemyUnitLayers);
+            RemoveBaseMapEnemyCells(round.enemyUnitLayers, selectedMap.enemyUnitLayers);
 
             SaveSelectedMapAsset();
             Debug.Log($"Round saved: {selectedMap.name} / {round.roundName}");
@@ -588,8 +655,10 @@ namespace StellaStair.Editor
                 ? EnsureLayer(board, "Defense Objectives", 20)
                 : null;
             Restore(defenseObjectiveLayer, round.defenseObjectives);
+            RemoveUnusedEnemyUnitLayers(board, round.enemyUnitLayers);
             Restore(EnsureLayer(board, "Enemy Guard Spawns", 21), round.enemyGuardSpawns);
             Restore(EnsureLayer(board, "Enemy Soldier Spawns", 21), round.enemySoldierSpawns);
+            RestoreEnemyUnitLayers(board, round.enemyUnitLayers);
 
             EditorSceneManager.MarkSceneDirty(board.gameObject.scene);
             SceneView.RepaintAll();
@@ -628,6 +697,7 @@ namespace StellaStair.Editor
                 ? EnsureLayer(board, "Defense Objectives", 20)
                 : null;
             Restore(defenseObjectiveLayer, selectedMap.defenseObjectives);
+            RemoveUnusedEnemyUnitLayers(board, selectedMap.enemyUnitLayers);
             Restore(EnsureLayer(board, "Enemy Guard Spawns", 21), selectedMap.enemyGuardSpawns);
             Restore(EnsureLayer(board, "Enemy Soldier Spawns", 21), selectedMap.enemySoldierSpawns);
             RestoreEnemyUnitLayers(board, selectedMap.enemyUnitLayers);
@@ -715,6 +785,34 @@ namespace StellaStair.Editor
             }
         }
 
+        private static void RemoveUnusedEnemyUnitLayers(
+            TacticalBoard board, List<TacticalMapData.EnemyUnitLayer> layers)
+        {
+            if (board == null || board.Grid == null)
+                return;
+
+            var desiredNames = new HashSet<string>();
+            if (layers != null)
+            {
+                foreach (var layer in layers)
+                    if (layer != null && layer.definition != null)
+                        desiredNames.Add(GetEnemyLayerName(layer));
+            }
+
+            var obsoleteLayers = new List<GameObject>();
+            foreach (Transform child in board.Grid.transform)
+            {
+                if (child == null || child.name == "Enemy Guard Spawns" ||
+                    child.name == "Enemy Soldier Spawns")
+                    continue;
+                if (child.GetComponent<EnemySpawnTilemap>() != null &&
+                    !desiredNames.Contains(child.name))
+                    obsoleteLayers.Add(child.gameObject);
+            }
+
+            foreach (var obsoleteLayer in obsoleteLayers)
+                Undo.DestroyObjectImmediate(obsoleteLayer);
+        }
         private static void RestoreEnemyUnitLayers(
             TacticalBoard board, List<TacticalMapData.EnemyUnitLayer> layers)
         {

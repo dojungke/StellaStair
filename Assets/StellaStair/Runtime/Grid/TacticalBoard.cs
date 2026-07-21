@@ -394,7 +394,8 @@ namespace StellaStair.Grid
                     maxHealth,
                     objectiveData != null ? objectiveData.DisplayName : objectName,
                     objectiveData != null ? objectiveData.Description : string.Empty,
-                    objectiveData != null ? objectiveData.Level : 1);
+                    objectiveData != null ? objectiveData.Level : 1,
+                    objectiveData != null ? objectiveData.FunctionDescription : string.Empty);
                 if (objective.TryPlace(this, position, false))
                 {
                     destination.Add(objective);

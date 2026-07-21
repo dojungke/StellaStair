@@ -7,8 +7,9 @@ namespace StellaStair.Grid
     {
         public static IReadOnlyDictionary<GridPosition, int> FindReachable(
             TacticalBoard board, GridPosition start, int movementPoints, TacticalUnit mover,
-            bool allowLadders = true)
+            bool allowLadders = true, ISet<GridPosition> blockedPositions = null)
         {
+            blockedPositions?.Clear();
             var traversalCosts = new Dictionary<GridPosition, int> { [start] = 0 };
             var reachable = new Dictionary<GridPosition, int> { [start] = 0 };
             var frontier = new Queue<GridPosition>();
@@ -29,6 +30,8 @@ namespace StellaStair.Grid
                     traversalCosts[next] = nextCost;
                     if (board.CanEnter(next, mover))
                         reachable[next] = nextCost;
+                    else if (board.IsWalkable(next))
+                        blockedPositions?.Add(next);
                     frontier.Enqueue(next);
                 }
             }

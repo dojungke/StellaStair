@@ -4,6 +4,7 @@ using StellaStair.Grid;
 using StellaStair.Input;
 using StellaStair.Presentation;
 using StellaStair.Units;
+using StellaStair.Town;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -100,6 +101,7 @@ namespace StellaStair.Editor
             board.ConfigureDefenseObjectives(defenseObjectives, objectDatabase.DefenseObjectiveMaxHealth);
             var deployment = systems.AddComponent<DeploymentManager>();
             systems.AddComponent<StageProgression>();
+            systems.AddComponent<TownHubPresenter>().EnsureUiExistsInScene();
             var highlighter = new GameObject("Grid Highlights").AddComponent<GridHighlighter>();
             var camera = CreateCamera();
             var input = systems.AddComponent<TacticalInputController>();

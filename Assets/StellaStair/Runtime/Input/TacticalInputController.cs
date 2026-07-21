@@ -27,6 +27,8 @@ namespace StellaStair.Input
         private TacticalUnit selected;
         private IReadOnlyDictionary<GridPosition, int> reachable;
         private readonly HashSet<GridPosition> attackablePositions = new();
+        private readonly HashSet<GridPosition> blockedAttackPositions = new();
+        private readonly HashSet<GridPosition> blockedMovementPositions = new();
         private TMP_Text attackButtonLabel;
         private TMP_Text attackChangeButtonLabel;
         private TMP_Text moveUndoButtonLabel;
@@ -736,7 +738,9 @@ namespace StellaStair.Input
 
             if (pendingMoveDestination.HasValue)
             {
-                highlighter.ShowMovePreview(deployment.Board, reachable.Keys, selected.Position, pendingMoveDestination.Value, selected);
+                highlighter.ShowMovePreview(
+                    deployment.Board, reachable.Keys, selected.Position,
+                    pendingMoveDestination.Value, selected, blockedMovementPositions);
                 return;
             }
 
@@ -753,12 +757,13 @@ namespace StellaStair.Input
             {
                 ClearAttackPreview();
                 reachable = GridPathfinder.FindReachable(
-                    deployment.Board, selected.Position, selected.MovementPoints, selected);
+                    deployment.Board, selected.Position, selected.MovementPoints, selected,
+                    blockedPositions: blockedMovementPositions);
                 attackablePositions.Clear();
+                blockedAttackPositions.Clear();
                 if (deployment.TryGetEnemyIntent(selected, out var intent))
                 {
-                    foreach (var position in selected.GetAttackTargetPositions(intent.AttackOrigin))
-                        attackablePositions.Add(position);
+                    BuildAttackRangeDisplay(selected, intent.AttackOrigin, false);
                     if (intent.WillAttack)
                         BuildAttackPreview(
                             selected, intent.TargetPosition, intent.AttackOrigin);
@@ -780,12 +785,12 @@ namespace StellaStair.Input
                         reachable.Keys, attackablePositions,
                         previewKnockbackDestinations,
                         previewCollisionPositions, previewVoidPositions,
-                        selected, previewKnockbackGhostDestinations);
+                        selected, previewKnockbackGhostDestinations, blockedAttackPositions,
+                        blockedMovementPositions);
                 }
                 else
                 {
-                    foreach (var position in selected.GetAttackTargetPositions(selected.Position))
-                        attackablePositions.Add(position);
+                    BuildAttackRangeDisplay(selected, selected.Position, false);
                     highlighter.ShowEnemyIntentPreview(
                         deployment.Board, selected.Position,
                         selected.Position, false,
@@ -793,16 +798,20 @@ namespace StellaStair.Input
                         reachable.Keys, attackablePositions,
                         previewKnockbackDestinations,
                         previewCollisionPositions, previewVoidPositions,
-                        selected, previewKnockbackGhostDestinations);
+                        selected, previewKnockbackGhostDestinations, blockedAttackPositions,
+                        blockedMovementPositions);
                 }
                 return;
             }
 
+            blockedMovementPositions.Clear();
             reachable = selected.RemainingMovement <= 0 || selected.HasAttacked
                 ? new Dictionary<GridPosition, int> { [selected.Position] = 0 }
                 : GridPathfinder.FindReachable(
-                    deployment.Board, selected.Position, selected.RemainingMovement, selected);
+                    deployment.Board, selected.Position, selected.RemainingMovement, selected,
+                    blockedPositions: blockedMovementPositions);
             attackablePositions.Clear();
+            blockedAttackPositions.Clear();
             if (IsAttackMode && !selected.CanUseCurrentAttackMode)
             {
                 highlighter.Clear();
@@ -810,11 +819,7 @@ namespace StellaStair.Input
             }
             if (!selected.HasAttacked && selected.CanUseCurrentAttackMode)
             {
-                foreach (var position in selected.GetAttackTargetPositions(selected.Position))
-                {
-                    if (selected.CanAttackPosition(position))
-                        attackablePositions.Add(position);
-                }
+                BuildAttackRangeDisplay(selected, selected.Position, true);
                 if (deployment.Board.IsWoodTile(selected.Position))
                     attackablePositions.Add(selected.Position);
             }
@@ -830,12 +835,14 @@ namespace StellaStair.Input
                         pendingAttackTargetsWood,
                         pendingAttackTargetsWood ? selected.AttackDamage : 0,
                         reachable.Keys, attackablePositions,
-                        previewKnockbackGhostDestinations, previewEffectPositions);
+                        previewKnockbackGhostDestinations, previewEffectPositions,
+                        blockedAttackPositions, blockedMovementPositions);
                 }
                 else
                 {
                     highlighter.Show(deployment.Board,
-                        new[] { selected.Position }, attackablePositions, selected.Position);
+                        new[] { selected.Position }, attackablePositions, selected.Position,
+                        blockedAttackPositions, blockedMovementPositions);
                 }
             }
             else
@@ -850,9 +857,28 @@ namespace StellaStair.Input
                 }
 
                 if (hasMoveDestination)
-                    highlighter.Show(deployment.Board, reachable.Keys, selected.Position);
+                    highlighter.Show(
+                        deployment.Board, reachable.Keys, selected.Position,
+                        blockedMovementPositions);
                 else
                     highlighter.Clear();
+            }
+        }
+
+        private void BuildAttackRangeDisplay(
+            TacticalUnit unit, GridPosition origin, bool requireCurrentActionState)
+        {
+            attackablePositions.Clear();
+            blockedAttackPositions.Clear();
+            foreach (var position in unit.GetAttackRangePositions(origin))
+            {
+                var attackable = unit.IsPositionAttackableFrom(origin, position);
+                if (requireCurrentActionState)
+                    attackable = attackable && unit.CanAttackPosition(position);
+                if (attackable)
+                    attackablePositions.Add(position);
+                else
+                    blockedAttackPositions.Add(position);
             }
         }
 
@@ -873,6 +899,8 @@ namespace StellaStair.Input
             IsAttackMode = false;
             ClearAttackPreview();
             attackablePositions.Clear();
+            blockedAttackPositions.Clear();
+            blockedMovementPositions.Clear();
             highlighter.Clear();
             RefreshActionButtons();
         }

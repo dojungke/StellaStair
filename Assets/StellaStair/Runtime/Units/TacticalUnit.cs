@@ -32,6 +32,9 @@ namespace StellaStair.Units
         [SerializeField, Min(0)] private int bonusMaxHealth;
         [SerializeField, Min(0)] private int bonusAttackDamage;
         [SerializeField, Min(0)] private int bonusMovementPoints;
+        [SerializeField, Min(0)] private int equipmentMaxHealthBonus;
+        [SerializeField, Min(0)] private int equipmentAttackDamageBonus;
+        [SerializeField, Min(0)] private int equipmentMovementBonus;
         [SerializeField, Min(0)] private int healthUpgradeCount;
         [SerializeField, Min(0)] private int attackUpgradeCount;
         [SerializeField, Min(0)] private int movementUpgradeCount;
@@ -130,11 +133,11 @@ namespace StellaStair.Units
         public string LastDamageSkillKey { get; private set; } = string.Empty;
         public string ProgressKey => definition != null ? definition.name : name;
         public int RemainingMovement { get; private set; }
-        public int MovementPoints => (definition != null ? definition.MovementPoints : fallbackMovementPoints) + bonusMovementPoints;
+        public int MovementPoints => (definition != null ? definition.MovementPoints : fallbackMovementPoints) + bonusMovementPoints + equipmentMovementBonus;
         public int MaxHealth => isCrate
             ? crateMaxHealth
-            : (definition != null ? definition.MaxHealth : fallbackMaxHealth) + bonusMaxHealth;
-        public int AttackDamage => (definition != null ? definition.AttackDamage : fallbackAttackDamage) + bonusAttackDamage;
+            : (definition != null ? definition.MaxHealth : fallbackMaxHealth) + bonusMaxHealth + equipmentMaxHealthBonus;
+        public int AttackDamage => (definition != null ? definition.AttackDamage : fallbackAttackDamage) + bonusAttackDamage + equipmentAttackDamageBonus;
         public int BasicAttackDamage => AttackDamage;
         public bool IsWizardDefaultAttackMode() => IsWizardUnit() && CurrentAttackMode == TacticalAttackMode.Default;
         public AttackDistanceRule AttackDistanceRule => definition != null
@@ -349,6 +352,19 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             if (bodyRenderer != null && bodyRenderer.sprite == null)
                 bodyRenderer.sprite = GetFallbackBodySprite();
         }
+        public void ApplyEquipmentBonuses(int maxHealthBonus, int attackDamageBonus, int movementBonus)
+        {
+            var previousMaxHealth = MaxHealth;
+            var previousMovementBonus = equipmentMovementBonus;
+            equipmentMaxHealthBonus = Mathf.Max(0, maxHealthBonus);
+            equipmentAttackDamageBonus = Mathf.Max(0, attackDamageBonus);
+            equipmentMovementBonus = Mathf.Max(0, movementBonus);
+            if (CurrentHealth > 0)
+                CurrentHealth = Mathf.Clamp(CurrentHealth + MaxHealth - previousMaxHealth, 1, MaxHealth);
+            RemainingMovement = Mathf.Clamp(RemainingMovement + equipmentMovementBonus - previousMovementBonus, 0, MovementPoints);
+            HealthChanged?.Invoke(this, CurrentHealth, MaxHealth);
+        }
+
         public void Configure(UnitDefinition unitDefinition, UnitTeam unitTeam)
         {
             isCrate = false;
@@ -1848,6 +1864,35 @@ ThrustHasKnockback = thrustHasKnockback,
             return true;
         }
 
+        public IEnumerable<GridPosition> GetAttackRangePositions(GridPosition origin)
+        {
+            var yielded = new HashSet<GridPosition>();
+            if (CurrentAttackMode != TacticalAttackMode.Default)
+            {
+                foreach (var position in GetSpecialAttackPositions(origin))
+                    if (position != origin && yielded.Add(position))
+                        yield return position;
+                yield break;
+            }
+            if (HasCustomAttackTargetOffsets)
+            {
+                foreach (var offset in definition.AttackTargetOffsets)
+                {
+                    var position = new GridPosition(origin.X + offset.x, origin.Y + offset.y);
+                    if (position != origin && yielded.Add(position))
+                        yield return position;
+                }
+                yield break;
+            }
+            if (board == null)
+                yield break;
+            foreach (var position in board.GetCellsInAttackRange(
+                         origin, AttackRange, VerticalAttackRange))
+            {
+                if (IsPositionInAttackRange(origin, position) && yielded.Add(position))
+                    yield return position;
+            }
+        }
         public IEnumerable<GridPosition> GetAttackTargetPositions(GridPosition origin)
         {
             var yielded = new HashSet<GridPosition>();
@@ -3039,7 +3084,9 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             SetHealthBarVisible(false);
         }
 
-        public void ConfigureAsObjective(int maxHealth = 8, string displayName = null, string description = null, int level = 1)
+        public void ConfigureAsObjective(
+            int maxHealth = 8, string displayName = null, string description = null,
+            int level = 1, string functionDescription = null)
         {
             isCrate = true;
             isObjective = true;
@@ -3050,6 +3097,7 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             explosionDamage = 0;
             objectiveDisplayName = string.IsNullOrWhiteSpace(displayName) ? "Objective" : displayName.Trim();
             objectiveDescription = description ?? string.Empty;
+            objectFunctionDescription = functionDescription ?? string.Empty;
             currentLevel = Mathf.Max(1, level);
             if (!IsPlaced)
             {

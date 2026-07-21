@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Units;
+using StellaStair.Town;
 using UnityEngine;
 
 namespace StellaStair.Battle
@@ -76,14 +77,39 @@ namespace StellaStair.Battle
                 return y != 0 ? y : left.X.CompareTo(right.X);
             });
 
+            var unlockedMemberCount = 0;
+            foreach (var member in defaultParty)
+            {
+                var memberKey = member.definition != null ? member.definition.name : member.definitionName;
+                if (TownProgressState.IsPartyMemberUnlocked(memberKey))
+                    unlockedMemberCount++;
+            }
+
+            var deploymentCenter = Vector3.zero;
+            if (battle.Board != null && deploymentCells.Count > 0)
+            {
+                foreach (var cell in deploymentCells)
+                    deploymentCenter += battle.Board.PositionToWorld(cell);
+                deploymentCenter /= deploymentCells.Count;
+            }
+
+            var spawnIndex = 0;
             for (var i = 0; i < defaultParty.Count; i++)
             {
                 var member = defaultParty[i];
+                var memberKey = member.definition != null ? member.definition.name : member.definitionName;
+                if (!TownProgressState.IsPartyMemberUnlocked(memberKey))
+                    continue;
                 var stagingPosition = member.stagingPosition;
-                if (battle.Board != null && i < deploymentCells.Count)
-                    stagingPosition = battle.Board.PositionToWorld(deploymentCells[i]) +
+                if (battle.Board != null && deploymentCells.Count > 0)
+                {
+                    var centeredIndex = spawnIndex - (unlockedMemberCount - 1) * 0.5f;
+                    stagingPosition = deploymentCenter +
+                        Vector3.right * (centeredIndex * battle.Board.Grid.cellSize.x) +
                         Vector3.up * (battle.Board.Grid.cellSize.y * 2f);
+                }
                 SpawnPlayer(battle, member, stagingPosition);
+                spawnIndex++;
             }
 
             hasSpawned = true;
@@ -125,6 +151,12 @@ namespace StellaStair.Battle
             unit.Configure(definition, UnitTeam.Player);
             if (definition != null && savedPartyProgress.TryGetValue(definition.name, out var progress))
                 unit.ApplyProgress(progress);
+            var armor = TownProgressState.GetEquippedItem(unit.ProgressKey, EquipmentSlot.Armor);
+            var weapon = TownProgressState.GetEquippedItem(unit.ProgressKey, EquipmentSlot.Weapon);
+            unit.ApplyEquipmentBonuses(
+                (armor?.MaxHealthBonus ?? 0) + (weapon?.MaxHealthBonus ?? 0),
+                (armor?.AttackDamageBonus ?? 0) + (weapon?.AttackDamageBonus ?? 0),
+                (armor?.MovementBonus ?? 0) + (weapon?.MovementBonus ?? 0));
             unit.EnsureClickableBody();
             battle.RegisterPlayer(unit);
         }

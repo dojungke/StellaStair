@@ -158,7 +158,7 @@ namespace StellaStair.Presentation
             var definition = trackedUnit.Definition;
             var isObject = trackedUnit.IsObjective || trackedUnit.IsCrate;
             nameLabel.text = isObject && !string.IsNullOrWhiteSpace(trackedUnit.ObjectiveDisplayName) ? trackedUnit.ObjectiveDisplayName : definition != null ? definition.DisplayName : trackedUnit.name;
-            levelLabel.text = trackedUnit.IsCrate ? (string.IsNullOrWhiteSpace(trackedUnit.ObjectFunctionDescription) ? (trackedUnit.IsExplosiveCrate ? "밀치기 가능 · 폭발" : "밀치기 가능") : trackedUnit.ObjectFunctionDescription) : trackedUnit.IsObjective ? "목표" : $"레벨 {trackedUnit.CurrentLevel}";
+            levelLabel.text = trackedUnit.IsObjective ? (string.IsNullOrWhiteSpace(trackedUnit.ObjectFunctionDescription) ? "목표" : trackedUnit.ObjectFunctionDescription) : trackedUnit.IsCrate ? (string.IsNullOrWhiteSpace(trackedUnit.ObjectFunctionDescription) ? (trackedUnit.IsExplosiveCrate ? "밀치기 가능 · 폭발" : "밀치기 가능") : trackedUnit.ObjectFunctionDescription) : $"레벨 {trackedUnit.CurrentLevel}";
             experienceLabel.text = isObject ? (string.IsNullOrWhiteSpace(trackedUnit.ObjectiveDescription) ? "설명 없음" : trackedUnit.ObjectiveDescription) : trackedUnit.Team == UnitTeam.Enemy ? definition != null && !string.IsNullOrWhiteSpace(definition.Description) ? definition.Description : "설명 없음" : $"다음 레벨까지 {trackedUnit.ExperienceToNextLevel - trackedUnit.CurrentExperience} EXP";
             portrait.sprite = definition != null ? definition.UnitSprite : null;
             if (portrait.sprite == null)

@@ -200,6 +200,7 @@ namespace StellaStair.Editor
                 "levelup" or "level" or "upgrade" => TacticalDialogueTiming.LevelUp,
                 "allyhealed" or "allyheal" or "heal" or "healed" => TacticalDialogueTiming.AllyHealed,
                 "skillused" or "skill" or "skilluse" or "attackused" => TacticalDialogueTiming.SkillUsed,
+                "guildfirstvisit" or "firstguildvisit" or "guildintro" => TacticalDialogueTiming.GuildFirstVisit,
                 _ => TacticalDialogueTiming.BeforeBattle
             };
         }
