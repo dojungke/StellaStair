@@ -1,16 +1,20 @@
-body { padding: 0; margin: 0 }
+html, body { width: 100%; height: 100%; padding: 0; margin: 0; overflow: hidden }
 #unity-container { position: absolute }
-#unity-container.unity-desktop { left: 50%; top: 50%; transform: translate(-50%, -50%) }
+#unity-container.unity-desktop { left: 50%; top: 50%; width: min(960px, 100vw, calc((100vh - 38px) * 1.6)); transform: translate(-50%, -50%) }
 #unity-container.unity-mobile { position: fixed; width: 100%; height: 100% }
-#unity-canvas { background: #1F1F20 }
-.unity-mobile #unity-canvas { width: 100%; height: 100% }
+#unity-canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; background: #1F1F20 }
+.unity-mobile #unity-canvas { width: 100%; height: 100%; aspect-ratio: auto }
 #unity-loading-bar { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none }
 #unity-logo { width: 154px; height: 130px; background: url('unity-logo-dark.png') no-repeat center }
 #unity-progress-bar-empty { width: 141px; height: 18px; margin-top: 10px; margin-left: 6.5px; background: url('progress-bar-empty-dark.png') no-repeat center }
 #unity-progress-bar-full { width: 0%; height: 18px; margin-top: 10px; background: url('progress-bar-full-dark.png') no-repeat center }
-#unity-footer { position: relative }
+#unity-footer { position: relative; height: 38px }
 .unity-mobile #unity-footer { display: none }
-#unity-logo-title-footer { float:left; width: 102px; height: 38px; background: url('unity-logo-title-footer.png') no-repeat center }
+#unity-logo-title-footer { float: left; width: 102px; height: 38px; background: url('unity-logo-title-footer.png') no-repeat center }
 #unity-build-title { float: right; margin-right: 10px; line-height: 38px; font-family: arial; font-size: 18px }
-#unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
-#unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
+#unity-fullscreen-button { cursor: pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
+#unity-warning { position: absolute; left: 50%; top: 5%; max-width: calc(100vw - 24px); transform: translate(-50%); background: white; padding: 10px; display: none }
+@media (max-height: 300px) {
+  #unity-container.unity-desktop { width: min(960px, 100vw, calc(100vh * 1.6)) }
+  #unity-container.unity-desktop #unity-footer { display: none }
+}
