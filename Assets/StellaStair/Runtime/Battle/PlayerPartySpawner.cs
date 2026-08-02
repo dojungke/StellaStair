@@ -156,7 +156,8 @@ namespace StellaStair.Battle
             unit.ApplyEquipmentBonuses(
                 (armor?.MaxHealthBonus ?? 0) + (weapon?.MaxHealthBonus ?? 0),
                 (armor?.AttackDamageBonus ?? 0) + (weapon?.AttackDamageBonus ?? 0),
-                (armor?.MovementBonus ?? 0) + (weapon?.MovementBonus ?? 0));
+                (armor?.MovementBonus ?? 0) + (weapon?.MovementBonus ?? 0),
+                weapon?.BasicAttackTargetRangeId ?? 0);
             unit.EnsureClickableBody();
             battle.RegisterPlayer(unit);
         }

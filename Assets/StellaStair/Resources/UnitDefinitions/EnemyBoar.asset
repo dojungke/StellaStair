@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
   <DisplayName>k__BackingField: Boar
   <Description>k__BackingField: "\uC808\uB9DD\uC758 \uC778\uB3C4\uC790"
+  <StartingLevel>k__BackingField: 1
   <MovementPoints>k__BackingField: 6
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 4

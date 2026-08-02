@@ -11,6 +11,12 @@ namespace StellaStair.Units
     [RequireComponent(typeof(Collider2D))]
     public sealed class TacticalUnit : MonoBehaviour
     {
+        private static readonly GridOffset[] GeniusSwordAttackOffsets =
+        {
+            new(-2, 1), new(-1, 1), new(0, 1), new(1, 1), new(2, 1),
+            new(-2, 0), new(-1, 0), new(1, 0), new(2, 0),
+            new(-2, -1), new(-1, -1), new(0, -1), new(1, -1), new(2, -1)
+        };
         [SerializeField] private UnitDefinition definition;
         [SerializeField] private UnitTeam team;
         [SerializeField] private bool isCrate;
@@ -35,6 +41,7 @@ namespace StellaStair.Units
         [SerializeField, Min(0)] private int equipmentMaxHealthBonus;
         [SerializeField, Min(0)] private int equipmentAttackDamageBonus;
         [SerializeField, Min(0)] private int equipmentMovementBonus;
+        [SerializeField, Min(0)] private int equipmentBasicAttackTargetRangeId;
         [SerializeField, Min(0)] private int healthUpgradeCount;
         [SerializeField, Min(0)] private int attackUpgradeCount;
         [SerializeField, Min(0)] private int movementUpgradeCount;
@@ -47,6 +54,8 @@ namespace StellaStair.Units
         [SerializeField] private bool hasCouragePassive;
         [SerializeField] private bool hasPiercingArrowAttack;
         [SerializeField, Min(0)] private int piercingArrowDamageBonus;
+        [SerializeField, Min(0)] private int piercingArrowCooldownReduction;
+        [SerializeField, Min(0)] private int piercingArrowCooldownRemaining;
         [SerializeField] private bool hasBowStrikeAttack;
         [SerializeField, Min(0)] private int bowStrikeDamageBonus;
         [SerializeField] private bool hasHarpoonAttack;
@@ -105,6 +114,7 @@ namespace StellaStair.Units
         private readonly Dictionary<Transform, ShadowDirectionState> shadowDirectionStates = new();
         private static Sprite fallbackBodySprite;
         private bool isImpactReserved;
+        private bool isDying;
         private TacticalUnit reservedImpactTarget;
         public UnitDefinition Definition => definition;
         public UnitTeam Team => team;
@@ -119,7 +129,7 @@ namespace StellaStair.Units
         public bool IsPlaced { get; private set; }
         public bool IsMoving { get; private set; }
         public bool IsAttacking { get; private set; }
-        public bool IsResolvingForcedMovement => IsMoving || isImpactReserved;
+        public bool IsResolvingForcedMovement => IsMoving || isImpactReserved || isDying;
         public bool IsAlive => CurrentHealth > 0;
         public bool HasMoved => RemainingMovement < MovementPoints;
         public bool CanUndoMovement => IsAlive && IsPlaced && !IsMoving && !IsAttacking &&
@@ -166,6 +176,7 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
         public int ThrustBackDamage => hasThrustAttack ? 1 + thrustBackDamageBonus : 0;
         public bool ThrustHasKnockback => hasThrustAttack && thrustHasKnockback;
         public int PiercingArrowDamage => hasPiercingArrowAttack ? 1 + piercingArrowDamageBonus : 0;
+        public int PiercingArrowCooldown => Mathf.Max(1, 3 - piercingArrowCooldownReduction);
         public int BowStrikeDamage => hasBowStrikeAttack ? 1 + bowStrikeDamageBonus : 0;
         public int HarpoonDamage => hasHarpoonAttack ? 1 : 0;
         public int FireballDamage => hasFireballAttack ? 1 + fireballDamageBonus : 0;
@@ -185,7 +196,12 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             ? $"{GetAttackName(SelectedAttackMode)} (\uCFE8\uD0C0\uC784 \uC911)"
             : GetAttackName(SelectedAttackMode);
         public bool HasCustomCurrentAttackModeEffectOffsets => HasCurrentAttackModeEffectOffsets(out _);
-        public bool HasCustomAttackTargetOffsets => definition != null && definition.HasCustomAttackTargetOffsets;
+        private IReadOnlyList<GridOffset> BasicAttackTargetOffsets =>
+            equipmentBasicAttackTargetRangeId == 7
+                ? GeniusSwordAttackOffsets
+                : definition != null ? definition.AttackTargetOffsets : null;
+        public bool HasCustomAttackTargetOffsets =>
+            BasicAttackTargetOffsets != null && BasicAttackTargetOffsets.Count > 0;
         public bool HasCustomAttackEffectOffsets => definition != null && definition.HasCustomAttackEffectOffsets;
         public float UnitWidthInCells => definition != null
             ? definition.UnitWidthInCells
@@ -203,6 +219,7 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
         public event Action<TacticalUnit, TacticalUnit, int> Healed;
         public event Action<TacticalUnit, string> AttackUsed;
         public event Func<TacticalUnit, string, GridPosition, IEnumerator> BeforeAttack;
+        public event Func<TacticalUnit, IEnumerator> BeforeDeath;
         public event Action<TacticalUnit, int, int> ExperienceChanged;
         public event Action<TacticalUnit, int> LeveledUp;
         public event Action<TacticalUnit> Died;
@@ -244,7 +261,8 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             UnlockNatureFragrance,
             NatureFragranceCooldownMinusOne,
             NatureFragranceHealPlusOne,
-            ArcaneAccelerationPassive
+            ArcaneAccelerationPassive,
+            PiercingArrowCooldownMinusOne
         }
 
         public readonly struct LevelUpUpgradeOption
@@ -280,6 +298,8 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             public bool HasCouragePassive;
             public bool HasPiercingArrowAttack;
             public int PiercingArrowDamageBonus;
+            public int PiercingArrowCooldownReduction;
+            public int PiercingArrowCooldownRemaining;
             public bool HasBowStrikeAttack;
             public int BowStrikeDamageBonus;
             public bool HasHarpoonAttack;
@@ -352,13 +372,16 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             if (bodyRenderer != null && bodyRenderer.sprite == null)
                 bodyRenderer.sprite = GetFallbackBodySprite();
         }
-        public void ApplyEquipmentBonuses(int maxHealthBonus, int attackDamageBonus, int movementBonus)
+        public void ApplyEquipmentBonuses(
+            int maxHealthBonus, int attackDamageBonus, int movementBonus,
+            int basicAttackTargetRangeId = 0)
         {
             var previousMaxHealth = MaxHealth;
             var previousMovementBonus = equipmentMovementBonus;
             equipmentMaxHealthBonus = Mathf.Max(0, maxHealthBonus);
             equipmentAttackDamageBonus = Mathf.Max(0, attackDamageBonus);
             equipmentMovementBonus = Mathf.Max(0, movementBonus);
+            equipmentBasicAttackTargetRangeId = Mathf.Max(0, basicAttackTargetRangeId);
             if (CurrentHealth > 0)
                 CurrentHealth = Mathf.Clamp(CurrentHealth + MaxHealth - previousMaxHealth, 1, MaxHealth);
             RemainingMovement = Mathf.Clamp(RemainingMovement + equipmentMovementBonus - previousMovementBonus, 0, MovementPoints);
@@ -374,6 +397,7 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             definition = unitDefinition;
             currentLevel = unitDefinition != null ? Mathf.Max(1, unitDefinition.StartingLevel) : 1;
             currentExperience = 0;
+            experienceToNextLevel = GetExperienceRequirementForLevel(currentLevel);
             team = unitTeam;
             if (!IsPlaced)
             {
@@ -1218,7 +1242,15 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
             else if (isArcher)
             {
                 if (!hasPiercingArrowAttack)
-                    candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.UnlockPiercingArrow, "관통 화살", "5칸의 직선을 관통하며 경로의 모든 유닛에게 1 피해를 줍니다."));
+                    candidates.Add(new LevelUpUpgradeOption(
+                        LevelUpUpgradeType.UnlockPiercingArrow,
+                        "\uAD00\uD1B5\uC0B4",
+                        "5\uCE78\uC758 \uC9C1\uC120\uC744 \uAD00\uD1B5\uD558\uBA70 \uACBD\uB85C\uC758 \uBAA8\uB4E0 \uC720\uB2DB\uC5D0\uAC8C 1 \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4. \uCFE8\uD0C0\uC784 3\uD134."));
+                if (hasPiercingArrowAttack && piercingArrowCooldownReduction < 1)
+                    candidates.Add(new LevelUpUpgradeOption(
+                        LevelUpUpgradeType.PiercingArrowCooldownMinusOne,
+                        "\uAD00\uD1B5\uC0B4 \uCFE8\uD0C0\uC784 -1",
+                        "\uAD00\uD1B5\uC0B4 \uCFE8\uD0C0\uC784\uC774 1\uD134 \uAC10\uC18C\uD569\uB2C8\uB2E4."));
                 if (hasPiercingArrowAttack && piercingArrowDamageBonus < 2)
                     candidates.Add(new LevelUpUpgradeOption(LevelUpUpgradeType.PiercingArrowDamagePlusOne, "관통 화살 피해량 +1", "관통 화살 피해량이 1 증가합니다."));
                 if (!hasBowStrikeAttack)
@@ -1317,11 +1349,18 @@ public int ThrustFrontDamage => hasThrustAttack ? 1 + thrustFrontDamageBonus : 0
                 case LevelUpUpgradeType.UnlockPiercingArrow:
                     if (hasPiercingArrowAttack) return;
                     hasPiercingArrowAttack = true;
+                    piercingArrowCooldownRemaining = 0;
                     currentAttackMode = TacticalAttackMode.PiercingArrow;
                     break;
                 case LevelUpUpgradeType.PiercingArrowDamagePlusOne:
                     if (!hasPiercingArrowAttack || piercingArrowDamageBonus >= 2) return;
                     piercingArrowDamageBonus++;
+                    break;
+                case LevelUpUpgradeType.PiercingArrowCooldownMinusOne:
+                    if (!hasPiercingArrowAttack || piercingArrowCooldownReduction >= 1) return;
+                    piercingArrowCooldownReduction++;
+                    piercingArrowCooldownRemaining = Mathf.Min(
+                        piercingArrowCooldownRemaining, PiercingArrowCooldown);
                     break;
                 case LevelUpUpgradeType.UnlockBowStrike:
                     if (hasBowStrikeAttack) return;
@@ -1429,6 +1468,8 @@ ThrustHasKnockback = thrustHasKnockback,
                 HasCouragePassive = hasCouragePassive,
                 HasPiercingArrowAttack = hasPiercingArrowAttack,
                 PiercingArrowDamageBonus = piercingArrowDamageBonus,
+                PiercingArrowCooldownReduction = piercingArrowCooldownReduction,
+                PiercingArrowCooldownRemaining = piercingArrowCooldownRemaining,
                 HasBowStrikeAttack = hasBowStrikeAttack,
                 BowStrikeDamageBonus = bowStrikeDamageBonus,
                 HasHarpoonAttack = hasHarpoonAttack,
@@ -1455,7 +1496,9 @@ ThrustHasKnockback = thrustHasKnockback,
         {
             currentLevel = Mathf.Max(1, snapshot.CurrentLevel);
             currentExperience = Mathf.Max(0, snapshot.CurrentExperience);
-            experienceToNextLevel = Mathf.Max(1, snapshot.ExperienceToNextLevel);
+            experienceToNextLevel = Mathf.Max(
+                GetExperienceRequirementForLevel(currentLevel),
+                snapshot.ExperienceToNextLevel);
             bonusMaxHealth = Mathf.Max(0, snapshot.BonusMaxHealth);
             bonusAttackDamage = Mathf.Max(0, snapshot.BonusAttackDamage);
             bonusMovementPoints = Mathf.Max(0, snapshot.BonusMovementPoints);
@@ -1470,6 +1513,9 @@ ThrustHasKnockback = thrustHasKnockback,
             hasCouragePassive = snapshot.HasCouragePassive;
             hasPiercingArrowAttack = snapshot.HasPiercingArrowAttack;
             piercingArrowDamageBonus = Mathf.Clamp(snapshot.PiercingArrowDamageBonus, 0, 2);
+            piercingArrowCooldownReduction = Mathf.Clamp(snapshot.PiercingArrowCooldownReduction, 0, 1);
+            piercingArrowCooldownRemaining = Mathf.Clamp(
+                snapshot.PiercingArrowCooldownRemaining, 0, PiercingArrowCooldown);
             hasBowStrikeAttack = snapshot.HasBowStrikeAttack;
             bowStrikeDamageBonus = Mathf.Clamp(snapshot.BowStrikeDamageBonus, 0, 1);
             hasHarpoonAttack = snapshot.HasHarpoonAttack;
@@ -1565,7 +1611,8 @@ ThrustHasKnockback = thrustHasKnockback,
 
         private bool IsAttackModeOnCooldown(TacticalAttackMode mode)
         {
-            return mode == TacticalAttackMode.Fireball && fireballCooldownRemaining > 0 ||
+            return mode == TacticalAttackMode.PiercingArrow && piercingArrowCooldownRemaining > 0 ||
+                   mode == TacticalAttackMode.Fireball && fireballCooldownRemaining > 0 ||
                    mode == TacticalAttackMode.IceSpike && iceSpikeCooldownRemaining > 0 ||
                    mode == TacticalAttackMode.NatureFragrance && natureFragranceCooldownRemaining > 0;
         }
@@ -1574,7 +1621,7 @@ ThrustHasKnockback = thrustHasKnockback,
         {
             return mode == TacticalAttackMode.Default ||
                    mode == TacticalAttackMode.Thrust && hasThrustAttack ||
-                   mode == TacticalAttackMode.PiercingArrow && hasPiercingArrowAttack ||
+                   mode == TacticalAttackMode.PiercingArrow && hasPiercingArrowAttack && piercingArrowCooldownRemaining <= 0 ||
                    mode == TacticalAttackMode.BowStrike && hasBowStrikeAttack ||
                    mode == TacticalAttackMode.Harpoon && hasHarpoonAttack ||
                    mode == TacticalAttackMode.Fireball && hasFireballAttack && fireballCooldownRemaining <= 0 ||
@@ -1746,7 +1793,7 @@ ThrustHasKnockback = thrustHasKnockback,
         {
             if (HasCustomAttackTargetOffsets)
             {
-                foreach (var offset in definition.AttackTargetOffsets)
+                foreach (var offset in BasicAttackTargetOffsets)
                 {
                     var position = new GridPosition(origin.X + offset.x, origin.Y + offset.y);
                     if (IsDefaultAttackTargetReachable(origin, position))
@@ -1774,6 +1821,7 @@ ThrustHasKnockback = thrustHasKnockback,
         {
             agilityShieldAvailable = hasAgilityPassive;
             coverUsedThisTurn = false;
+            piercingArrowCooldownRemaining = 0;
             fireballCooldownRemaining = 0;
             iceSpikeCooldownRemaining = 0;
             natureFragranceCooldownRemaining = 0;
@@ -1788,6 +1836,7 @@ ThrustHasKnockback = thrustHasKnockback,
             HasAttacked = false;
             coverUsedThisTurn = false;
             arcaneAccelerationConsumedThisTurn = false;
+            if (piercingArrowCooldownRemaining > 0) piercingArrowCooldownRemaining--;
             if (fireballCooldownRemaining > 0) fireballCooldownRemaining--;
             if (iceSpikeCooldownRemaining > 0) iceSpikeCooldownRemaining--;
             if (natureFragranceCooldownRemaining > 0) natureFragranceCooldownRemaining--;
@@ -1805,6 +1854,7 @@ ThrustHasKnockback = thrustHasKnockback,
         }
 
         private const string BasicAttackSkillKey = "BasicAttack";
+        private const string CoverFireSkillKey = "CoverFire";
 
         private static string GetSkillKey(TacticalAttackMode attackMode)
         {
@@ -1823,6 +1873,9 @@ ThrustHasKnockback = thrustHasKnockback,
         {
             switch (mode)
             {
+                case TacticalAttackMode.PiercingArrow:
+                    piercingArrowCooldownRemaining = PiercingArrowCooldown;
+                    break;
                 case TacticalAttackMode.Fireball:
                     fireballCooldownRemaining = FireballCooldown;
                     break;
@@ -1876,7 +1929,7 @@ ThrustHasKnockback = thrustHasKnockback,
             }
             if (HasCustomAttackTargetOffsets)
             {
-                foreach (var offset in definition.AttackTargetOffsets)
+                foreach (var offset in BasicAttackTargetOffsets)
                 {
                     var position = new GridPosition(origin.X + offset.x, origin.Y + offset.y);
                     if (position != origin && yielded.Add(position))
@@ -1911,7 +1964,7 @@ ThrustHasKnockback = thrustHasKnockback,
 
             if (HasCustomAttackTargetOffsets)
             {
-                foreach (var offset in definition.AttackTargetOffsets)
+                foreach (var offset in BasicAttackTargetOffsets)
                 {
                     var position = new GridPosition(origin.X + offset.x, origin.Y + offset.y);
                     if (position == origin || !yielded.Add(position))
@@ -2067,10 +2120,10 @@ ThrustHasKnockback = thrustHasKnockback,
         private bool IsCustomAttackTargetOffset(
             int horizontalDistance, int verticalDistance, int deltaX, int deltaY)
         {
-            if (horizontalDistance == 0 && verticalDistance == 0 || definition == null)
+            if (horizontalDistance == 0 && verticalDistance == 0 || BasicAttackTargetOffsets == null)
                 return false;
 
-            foreach (var offset in definition.AttackTargetOffsets)
+            foreach (var offset in BasicAttackTargetOffsets)
                 if (offset.x == deltaX && offset.y == deltaY)
                     return true;
             return false;
@@ -2163,11 +2216,52 @@ if (hasAgilityPassive && agilityShieldAvailable)
             SetSelectedHighlighted(false);
             SetAttackPreviewed(false);
             var deathPosition = Position;
+            if (Team == UnitTeam.Player && !isCrate && !isObjective)
+            {
+                isDying = true;
+                StartCoroutine(AllyDeathRoutine(source));
+                return;
+            }
+
+            FinalizeDeath(deathPosition, source);
+        }
+
+        private IEnumerator AllyDeathRoutine(TacticalUnit damageSource)
+        {
+            if (BeforeDeath != null)
+            {
+                foreach (Func<TacticalUnit, IEnumerator> handler in BeforeDeath.GetInvocationList())
+                {
+                    var routine = handler(this);
+                    if (routine != null)
+                        yield return routine;
+                }
+            }
+
+            var direction = damageSource != null && damageSource != this
+                ? Position.X >= damageSource.Position.X ? 1 : -1
+                : FacingDirection < 0 ? -1 : 1;
+            SetFacingDirection(direction);
+            IsMoving = true;
+            unitAnimator?.PlayMove();
+            MoveStarted?.Invoke(this);
+            var cellWidth = board != null ? Mathf.Abs(board.Grid.cellSize.x) : 1f;
+            var start = transform.position;
+            var target = start + Vector3.right * (Mathf.Max(0.1f, cellWidth) * 2.5f * direction);
+            yield return MoveTransform(start, target, 0.55f);
+            IsMoving = false;
+            MoveCompleted?.Invoke(this);
+            FinalizeDeath(Position, damageSource);
+        }
+
+        private void FinalizeDeath(GridPosition deathPosition, TacticalUnit damageSource)
+        {
             unitAnimator?.PlayDeath();
             if (board != null)
                 board.RemoveOccupancy(this);
             if (isExplosiveCrate && board != null)
-                board.Detonate(deathPosition, this, explosionDamage, source);
+                board.Detonate(deathPosition, this, explosionDamage, damageSource);
+            isDying = false;
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
@@ -2191,11 +2285,17 @@ if (hasAgilityPassive && agilityShieldAvailable)
             {
                 currentExperience -= experienceToNextLevel;
                 currentLevel++;
+                experienceToNextLevel = GetExperienceRequirementForLevel(currentLevel);
                 LeveledUp?.Invoke(this, currentLevel);
                 unitAnimator?.PlayLevelUp();
                 PlayLevelUpEffect();
             }
             ExperienceChanged?.Invoke(this, currentExperience, experienceToNextLevel);
+        }
+
+        private static int GetExperienceRequirementForLevel(int level)
+        {
+            return Mathf.Max(3, Mathf.Max(1, level) * 3);
         }
 
         private void PlayLevelUpEffect()
@@ -2302,29 +2402,31 @@ if (hasAgilityPassive && agilityShieldAvailable)
             }
         }
 
-        private void ApplyThrustAttack(GridPosition targetPosition, bool allowFriendlyFire)
+        private IEnumerator ApplyThrustAttack(GridPosition targetPosition, bool allowFriendlyFire)
         {
             if (board == null)
-                return;
+                yield break;
 
             var direction = targetPosition.X > Position.X ? 1 : -1;
             var front = new GridPosition(Position.X + direction, Position.Y);
             var back = new GridPosition(Position.X + direction * 2, Position.Y);
-            ApplyThrustDamage(front, ThrustFrontDamage, direction, allowFriendlyFire);
-            ApplyThrustDamage(back, ThrustBackDamage, direction, allowFriendlyFire);
+            yield return ApplyThrustDamage(front, ThrustFrontDamage, direction, allowFriendlyFire);
+            if (IsAlive)
+                yield return ApplyThrustDamage(back, ThrustBackDamage, direction, allowFriendlyFire);
         }
 
-        private void ApplyThrustDamage(
+        private IEnumerator ApplyThrustDamage(
             GridPosition position, int damage, int direction, bool allowFriendlyFire)
         {
             if (damage <= 0 || board == null)
-                return;
+                yield break;
 
             if (board.TryGetOccupant(position, out var target) && target != null &&
                 target != this && target.IsAlive && (allowFriendlyFire || target.Team != Team))
             {
-                if (!TryDealAttackDamage(target, damage, allowFriendlyFire))
-                    return;
+                yield return ApplyDamageWithCoverFire(target, damage, allowFriendlyFire);
+                if (!IsAlive)
+                    yield break;
                 if (ThrustHasKnockback && target.IsAlive)
                     target.TryKnockbackInDirection(direction, 1, damageSource: this);
             }
@@ -2348,13 +2450,14 @@ if (hasAgilityPassive && agilityShieldAvailable)
             }
         }
 
-private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFriendlyFire)
+        private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFriendlyFire)
         {
             if (target == null || target == this || !target.IsAlive ||
                 !allowFriendlyFire && target.Team == Team)
                 yield break;
 
-            if (TryTriggerCoverFire(target))
+            yield return ResolveCoverFire(target);
+            if (!IsAlive)
                 yield break;
 
             // Keep a lethally-hit target alive until knockback resolves so it can
@@ -2375,38 +2478,116 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 target.TakeDamage(BasicAttackDamage, this);
         }
 
-        private bool TryDealAttackDamage(TacticalUnit target, int damage, bool allowFriendlyFire)
+        private IEnumerator ApplyDamageWithCoverFire(
+            TacticalUnit target, int damage, bool allowFriendlyFire)
         {
             if (target == null || target == this || !target.IsAlive || damage <= 0 ||
                 !allowFriendlyFire && target.Team == Team)
-                return false;
-            if (TryTriggerCoverFire(target))
-                return false;
-            target.TakeDamage(damage, this);
-            return target != null && target.IsAlive;
+                yield break;
+
+            yield return ResolveCoverFire(target);
+            if (IsAlive && target != null && target.IsAlive)
+                target.TakeDamage(damage, this);
         }
-        private bool TryTriggerCoverFire(TacticalUnit target)
+
+        private IEnumerator ResolveCoverFire(TacticalUnit protectedTarget)
         {
-            if (target == null || target.Team == Team || board == null)
-                return false;
+            var coveringAlly = FindCoveringAlly(protectedTarget);
+            if (coveringAlly == null)
+                yield break;
+
+            coveringAlly.coverUsedThisTurn = true;
+            yield return coveringAlly.StartCoroutine(
+                coveringAlly.PlayCoverFireRoutine(this));
+        }
+
+        private TacticalUnit FindCoveringAlly(TacticalUnit protectedTarget)
+        {
+            if (protectedTarget == null || protectedTarget.Team == Team || board == null)
+                return null;
 
             foreach (var ally in board.GetOccupantsInRange(Position, 999))
             {
-                if (ally == null || ally == this || ally == target || !ally.IsAlive ||
-                    ally.Team != target.Team || !ally.hasCoverPassive || ally.coverUsedThisTurn)
+                if (ally == null || ally == this || ally == protectedTarget || !ally.IsAlive ||
+                    ally.Team != protectedTarget.Team || !ally.hasCoverPassive || ally.coverUsedThisTurn)
                     continue;
                 if (!ally.IsPositionInAttackRange(ally.Position, Position))
                     continue;
                 if (!ally.CanPierceUnits && board.HasUnitBetween(ally.Position, Position, ally))
                     continue;
-
-                ally.coverUsedThisTurn = true;
-                TakeDamage(1, ally);
-                return !IsAlive;
+                return ally;
             }
 
-            return false;
+            return null;
         }
+
+        private IEnumerator PlayCoverFireRoutine(TacticalUnit target)
+        {
+            if (target == null || !target.IsAlive || !IsAlive)
+                yield break;
+
+            var direction = target.Position.X == Position.X
+                ? FacingDirection
+                : target.Position.X > Position.X ? 1 : -1;
+            SetFacingDirection(direction);
+            IsAttacking = true;
+            var beforeAttack = BeforeAttack?.Invoke(this, CoverFireSkillKey, target.Position);
+            if (beforeAttack != null)
+                yield return beforeAttack;
+
+            if (!IsAlive || target == null || !target.IsAlive)
+            {
+                IsAttacking = false;
+                yield break;
+            }
+
+            AttackUsed?.Invoke(this, CoverFireSkillKey);
+            unitAnimator?.PlayAttack();
+            var origin = transform.position;
+            var recoil = origin - Vector3.right * (0.08f * direction);
+            yield return MoveTransform(origin, recoil, 0.08f);
+            yield return MoveTransform(recoil, origin, 0.08f);
+            yield return PlayCoverFireShotRoutine(target);
+            if (target != null && target.IsAlive)
+                target.TakeDamage(1, this, CoverFireSkillKey);
+            yield return new WaitForSeconds(0.12f);
+            IsAttacking = false;
+            if (!IsMoving)
+                unitAnimator?.PlayIdle();
+        }
+
+        private IEnumerator PlayCoverFireShotRoutine(TacticalUnit target)
+        {
+            if (target == null)
+                yield break;
+
+            var start = transform.position + Vector3.up * 0.45f;
+            var end = target.transform.position + Vector3.up * 0.45f;
+            var delta = end - start;
+            var shot = new GameObject("Cover Fire Shot", typeof(SpriteRenderer));
+            var renderer = shot.GetComponent<SpriteRenderer>();
+            renderer.sprite = GetFallbackBodySprite();
+            renderer.color = new Color(1f, 0.82f, 0.18f, 0.95f);
+            renderer.sortingOrder = 120;
+            shot.transform.position = Vector3.Lerp(start, end, 0.5f);
+            shot.transform.rotation = Quaternion.Euler(
+                0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+            shot.transform.localScale = new Vector3(
+                Mathf.Max(0.1f, delta.magnitude), 0.055f, 1f);
+
+            var elapsed = 0f;
+            const float duration = 0.14f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var color = renderer.color;
+                color.a = 0.95f * (1f - Mathf.Clamp01(elapsed / duration));
+                renderer.color = color;
+                yield return null;
+            }
+            Destroy(shot);
+        }
+
         private IEnumerator ApplyPiercingArrowAttack(GridPosition targetPosition, bool allowFriendlyFire)
         {
             if (HasCurrentAttackModeEffectOffsets(out _))
@@ -2415,7 +2596,11 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 {
                     if (board.TryGetOccupant(position, out var target) && target != null && target != this &&
                         target.IsAlive && (allowFriendlyFire || target.Team != Team))
-                        TryDealAttackDamage(target, PiercingArrowDamage, allowFriendlyFire);
+                    {
+                        yield return ApplyDamageWithCoverFire(target, PiercingArrowDamage, allowFriendlyFire);
+                        if (!IsAlive)
+                            yield break;
+                    }
                     if (board.IsWoodTile(position))
                         board.DamageWood(position, PiercingArrowDamage, this);
                 }
@@ -2428,7 +2613,11 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 var position = new GridPosition(Position.X + direction.x * i, Position.Y + direction.y * i);
                 if (board.TryGetOccupant(position, out var target) && target != null && target != this &&
                     target.IsAlive && (allowFriendlyFire || target.Team != Team))
-                    TryDealAttackDamage(target, PiercingArrowDamage, allowFriendlyFire);
+                {
+                    yield return ApplyDamageWithCoverFire(target, PiercingArrowDamage, allowFriendlyFire);
+                    if (!IsAlive)
+                        yield break;
+                }
                 if (board.IsWoodTile(position))
                     board.DamageWood(position, PiercingArrowDamage, this);
             }
@@ -2441,7 +2630,9 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 target.IsAlive && (allowFriendlyFire || target.Team != Team))
             {
                 var direction = target.Position.X == Position.X ? FacingDirection : target.Position.X > Position.X ? 1 : -1;
-                TryDealAttackDamage(target, BowStrikeDamage, allowFriendlyFire);
+                yield return ApplyDamageWithCoverFire(target, BowStrikeDamage, allowFriendlyFire);
+                if (!IsAlive)
+                    yield break;
                 if (target.IsAlive && target.TryKnockbackInDirection(direction, 2, damageSource: this))
                     while (board.HasUnitsResolvingForcedMovement())
                         yield return null;
@@ -2454,7 +2645,9 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
                 target.IsAlive && (allowFriendlyFire || target.Team != Team))
             {
                 var direction = target.Position.X > Position.X ? -1 : 1;
-                TryDealAttackDamage(target, HarpoonDamage, allowFriendlyFire);
+                yield return ApplyDamageWithCoverFire(target, HarpoonDamage, allowFriendlyFire);
+                if (!IsAlive)
+                    yield break;
                 if (target.IsAlive && target.TryKnockbackInDirection(direction, 1, damageSource: this))
                     while (board.HasUnitsResolvingForcedMovement())
                         yield return null;
@@ -2467,7 +2660,11 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             {
                 if (board.TryGetOccupant(position, out var target) && target != null && target != this &&
                     target.IsAlive && (allowFriendlyFire || target.Team != Team))
-                    TryDealAttackDamage(target, FireballDamage, allowFriendlyFire);
+                {
+                    yield return ApplyDamageWithCoverFire(target, FireballDamage, allowFriendlyFire);
+                    if (!IsAlive)
+                        yield break;
+                }
                 else if (board.IsWoodTile(position))
                     board.DamageWood(position, FireballDamage, this);
             }
@@ -2479,7 +2676,7 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             if (board.TryGetOccupant(targetPosition, out var target) && target != null && target != this &&
                 target.IsAlive && (allowFriendlyFire || target.Team != Team))
             {
-                TryDealAttackDamage(target, IceSpikeDamage, allowFriendlyFire);
+                yield return ApplyDamageWithCoverFire(target, IceSpikeDamage, allowFriendlyFire);
                 yield break;
             }
 
@@ -2594,7 +2791,7 @@ private IEnumerator ApplyAttackDamageToUnit(TacticalUnit target, bool allowFrien
             var directlyAffectedPositions = new HashSet<GridPosition>();
             if (!attackWoodOnly && attackMode == TacticalAttackMode.Thrust && hasThrustAttack)
             {
-                ApplyThrustAttack(targetPosition, allowFriendlyFire);
+                yield return ApplyThrustAttack(targetPosition, allowFriendlyFire);
             }
             else if (!attackWoodOnly && attackMode == TacticalAttackMode.PiercingArrow && hasPiercingArrowAttack)
             {

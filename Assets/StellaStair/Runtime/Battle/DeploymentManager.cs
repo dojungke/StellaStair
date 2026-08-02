@@ -50,6 +50,7 @@ namespace StellaStair.Battle
         public event Action<int> PlayerTurnStarted;
         public event Action EnemyForcesDefeated;
         public event Action<TacticalUnit, TacticalUnit, string> EnemyKilled;
+        public event Func<TacticalUnit, IEnumerator> BeforeAllyDeath;
         public event Action<TacticalUnit, TacticalUnit, int> UnitHealed;
         public event Action<TacticalUnit> LevelUpUpgradeSelected;
         public event Func<TacticalUnit, IEnumerator> BeforeLevelUp;
@@ -1330,6 +1331,8 @@ private void BeginUnitsBattle(IEnumerable<TacticalUnit> units)
             unit.AttackUsed += OnUnitAttackUsed;
             unit.BeforeAttack -= OnUnitBeforeAttack;
             unit.BeforeAttack += OnUnitBeforeAttack;
+            unit.BeforeDeath -= OnUnitBeforeDeath;
+            unit.BeforeDeath += OnUnitBeforeDeath;
         }
 
         private void ObserveObjectives()
@@ -1396,6 +1399,19 @@ private void BeginUnitsBattle(IEnumerable<TacticalUnit> units)
             foreach (Func<TacticalUnit, string, GridPosition, IEnumerator> handler in BeforeAttack.GetInvocationList())
             {
                 var routine = handler(unit, skillKey, targetPosition);
+                if (routine != null)
+                    yield return routine;
+            }
+        }
+
+        private IEnumerator OnUnitBeforeDeath(TacticalUnit unit)
+        {
+            if (unit == null || unit.Team != UnitTeam.Player || BeforeAllyDeath == null)
+                yield break;
+
+            foreach (Func<TacticalUnit, IEnumerator> handler in BeforeAllyDeath.GetInvocationList())
+            {
+                var routine = handler(unit);
                 if (routine != null)
                     yield return routine;
             }

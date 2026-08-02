@@ -9,6 +9,8 @@ StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,LeftDirection,Righ
 [연습] 약초 채집,AfterVictory,4,,궁수가 합류했다.,기사,Dark,Flipped,궁수,Dark,Default,,
 [이리] 테스트,BeforeBattle,1,마법사,Before battle dialogue sample.,마법사,Normal,Default,이리,Dark,Default,,
 [이리] 테스트,BeforeBattle,2,이리,여러 줄 대사는 이렇게 같은 StageKey와 Timing에 행을 추가하면 됩니다.,마법사,Dark,Default,이리,Normal,Default,,
+[초급] 숲길 정리,BeforeBattle,1,이리,하하 이리와라,이리,Normal,Default,,Empty,,,
+[초급] 숲길 정리,AfterVictory,1,궁수,쉬운,궁수,Normal,Default,,Empty,,,
 *,BeforeBattle,1,이리,디버그,이리,Normal,Default,,Empty,Default,,
 *,AfterDefeat,1,Guide,디버그,Hero,Dark,Default,Enemy,Normal,Default,,
 *,GuildFirstVisit,1,마법사,길,마법사,Normal,Default,기사,Dark,Flipped,,
@@ -36,9 +38,9 @@ StageKey,Timing,Order,Speaker,Text,LeftCharacter,LeftPortrait,LeftDirection,Righ
 *,EnemyKilled,1,Wizard,얼죽아,,,,,,,IceSpike,2.2
 *,EnemyKilled,1,Wizard,새빨갛고 아름다운 불꽃놀이가 되어라!,,,,,,,BasicAttack,2.2
 *,EnemyKilled,1,Wizard,익스플로젼!,,,,,,,BombCrate,2.2
-*,,,,,,,,,,,,
-*,,,,,,,,,,,,
-*,,,,,,,,,,,,
+*,AllyDied,1,Wizard,젠장 회귀한다!,,,,,,,,2.2
+*,AllyDied,1,Knight,하아 지치는군,,,,,,,,
+*,AllyDied,1,Archer,더는 힘들것 같아요...,,,,,,,,
 *,,,,,,,,,,,,
 *,,,,,,,,,,,,
 *,,,,,,,,,,,,

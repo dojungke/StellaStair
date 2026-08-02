@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc5a8d7204cf26429b4c3b5bef54a83, type: 3}
+  m_Name: 05 Arcane Staff
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Town.TownItemData
+  displayName: "\uB9C8\uB3C4 \uC9C0\uD321\uC774"
+  description: "\uB9C8\uBC95\uC0AC \uAE30\uBCF8 \uACF5\uACA9 \uD53C\uD574\uB7C9 +1"
+  price: 150
+  maxHealthBonus: 0
+  attackDamageBonus: 1
+  movementBonus: 0
+  basicAttackTargetRangeId: 0
+  icon: {fileID: 0}
+  equipmentSlot: 1
+  weaponKind: 3

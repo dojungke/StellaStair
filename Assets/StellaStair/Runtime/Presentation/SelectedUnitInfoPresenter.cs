@@ -127,11 +127,12 @@ namespace StellaStair.Presentation
             if (p.HasCouragePassive) lines.Add("용기 패시브");
             if (p.HasPiercingArrowAttack) lines.Add("관통 화살 해금");
             AddRepeated(lines, "관통 화살 피해량 +1", p.PiercingArrowDamageBonus);
+            AddRepeated(lines, "관통살 쿨타임 -1", p.PiercingArrowCooldownReduction);
             if (p.HasBowStrikeAttack) lines.Add("활격 해금");
             AddRepeated(lines, "활격 피해량 +1", p.BowStrikeDamageBonus);
             if (p.HasHarpoonAttack) lines.Add("작살 해금");
             if (p.HasAgilityPassive) lines.Add("민첩 패시브");
-            if (p.HasCoverPassive) lines.Add("엄폐 패시브");
+            if (p.HasCoverPassive) lines.Add("엄호 사격 패시브");
             if (p.HasFireballAttack) lines.Add("화염구 해금");
             AddRepeated(lines, "화염구 피해량 +1", p.FireballDamageBonus);
             AddRepeated(lines, "화염구 쿨타임 -1", p.FireballCooldownReduction);

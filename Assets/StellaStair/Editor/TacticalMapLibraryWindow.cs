@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using StellaStair.Battle;
 using StellaStair.Grid;
 using StellaStair.Units;
@@ -41,6 +41,9 @@ namespace StellaStair.Editor
                     "Background Tint", selectedMap.BackgroundTint);
                 var stageType = (TacticalStageType)EditorGUILayout.EnumPopup(
                     "Stage Type", selectedMap.stageType);
+                var missionGrade = (TacticalMissionGrade)EditorGUILayout.EnumPopup(
+                    "Mission Grade", selectedMap.missionGrade);
+                var bossMission = EditorGUILayout.Toggle("Boss Mission", selectedMap.bossMission);
                 var defenseTurns = selectedMap.defenseTurnsToSurvive;
                 var escortTurns = selectedMap.escortTurnsToSurvive;
                 var escortKey = selectedMap.escortUnitProgressKey;
@@ -65,6 +68,8 @@ namespace StellaStair.Editor
                     selectedMap.backgroundSprite = backgroundSprite;
                     selectedMap.backgroundTint = backgroundTint;
                     selectedMap.stageType = stageType;
+                    selectedMap.missionGrade = missionGrade;
+                    selectedMap.bossMission = bossMission;
 
 
 
@@ -547,7 +552,7 @@ namespace StellaStair.Editor
             EnsureMapsFolder();
             var path = EditorUtility.SaveFilePanelInProject(
                 "Save Tactical Map", "NewTacticalMap", "asset",
-                "??ν븷 留??대쫫???낅젰?섏꽭??", "Assets/StellaStair/Maps");
+                "???館釉?筌???已????낆젾??뤾쉭??", "Assets/StellaStair/Maps");
             if (string.IsNullOrEmpty(path))
                 return;
             var map = CreateInstance<TacticalMapData>();
@@ -568,7 +573,7 @@ namespace StellaStair.Editor
         {
             var board = Object.FindAnyObjectByType<TacticalBoard>();
             if (board == null)
-                EditorUtility.DisplayDialog("Map Library", "?꾩옱 ?ъ뿉 TacticalBoard媛 ?놁뒿?덈떎.", "OK");
+                EditorUtility.DisplayDialog("Map Library", "?袁⑹삺 ??肉?TacticalBoard揶쎛 ??곷뮸??덈뼄.", "OK");
             return board;
         }
 

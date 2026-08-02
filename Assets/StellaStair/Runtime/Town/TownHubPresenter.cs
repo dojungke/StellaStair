@@ -69,9 +69,11 @@ namespace StellaStair.Town
             guildOpened = onGuildOpened;
 
             catalog.Clear();
-            var assets = Resources.LoadAll<TownItemData>("TownItems");
-            if (assets != null && assets.Length > 0) catalog.AddRange(assets);
-            else catalog.AddRange(TownProgressState.GetDefaultCatalog());
+            catalog.AddRange(Resources.LoadAll<TownItemData>("TownItems"));
+            catalog.Sort((left, right) => string.Compare(
+                left != null ? left.name : string.Empty,
+                right != null ? right.name : string.Empty,
+                StringComparison.OrdinalIgnoreCase));
 
             root.SetActive(true);
             RefreshAll();
@@ -212,7 +214,8 @@ namespace StellaStair.Town
             foreach (var stage in stages)
             {
                 var captured = stage;
-                CreateGuildStageButton(choicesRow, stage.DisplayName, stage.mapDescription, () => stageSelected?.Invoke(captured));
+                var bossSuffix = stage.IsBossMission ? "\u0020\uBCF4\uC2A4" : string.Empty;
+                CreateGuildStageButton(choicesRow, $"[{stage.MissionGradeDisplayName}{bossSuffix}] {stage.DisplayName}", stage.mapDescription, () => stageSelected?.Invoke(captured));
             }
         }
 

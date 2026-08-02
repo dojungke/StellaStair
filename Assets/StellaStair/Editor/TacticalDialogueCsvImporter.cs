@@ -201,6 +201,8 @@ namespace StellaStair.Editor
                 "allyhealed" or "allyheal" or "heal" or "healed" => TacticalDialogueTiming.AllyHealed,
                 "skillused" or "skill" or "skilluse" or "attackused" => TacticalDialogueTiming.SkillUsed,
                 "guildfirstvisit" or "firstguildvisit" or "guildintro" => TacticalDialogueTiming.GuildFirstVisit,
+                "allydied" or "allydeath" or "playerdied" or "playerdeath" or
+                    "\uC544\uAD70\uC0AC\uB9DD" or "\uC544\uAD70\uC0AC\uB9DD\uB300\uC0AC" => TacticalDialogueTiming.AllyDied,
                 _ => TacticalDialogueTiming.BeforeBattle
             };
         }

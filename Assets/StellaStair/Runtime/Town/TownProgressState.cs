@@ -1,5 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using StellaStair.Battle;
+using StellaStair.Grid;
 
 namespace StellaStair.Town
 {
@@ -7,41 +9,31 @@ namespace StellaStair.Town
     {
         private static readonly Dictionary<TownItemData, int> inventory = new();
         private static readonly Dictionary<string, TownItemData> armorEquipment = new();
+        private const int BossMissionInterval = 5;
         private static readonly Dictionary<string, TownItemData> weaponEquipment = new();
-        private static readonly List<TownItemData> defaultCatalog = new();
         private static int gold = 300;
         private static string selectedStageName;
         private static bool firstBattleCompleted;
         private static bool guildIntroductionPlaying;
         private static bool guildIntroductionCompleted;
+        private static TacticalPartyLevel partyLevel = TacticalPartyLevel.Beginner;
+        private static int completedMissionsAtCurrentPartyLevel;
 
         public static int Gold => gold;
         public static bool FirstBattleCompleted => firstBattleCompleted;
         public static bool GuildIntroductionCompleted => guildIntroductionCompleted;
+        public static TacticalPartyLevel PartyLevel => partyLevel;
+        public static int CompletedMissionsAtCurrentPartyLevel => completedMissionsAtCurrentPartyLevel;
+        public static int MissionsUntilBoss => BossMissionInterval;
+        public static bool NextMissionIsBoss => completedMissionsAtCurrentPartyLevel >= BossMissionInterval - 1;
         public static IReadOnlyDictionary<TownItemData, int> Inventory => inventory;
 
-        public static IReadOnlyList<TownItemData> GetDefaultCatalog()
-        {
-            if (defaultCatalog.Count == 0)
-            {
-                defaultCatalog.Add(TownItemData.CreateRuntime(
-                    "가죽 방어구", "최대 체력 +1", 100, EquipmentSlot.Armor, healthBonus: 1));
-                defaultCatalog.Add(TownItemData.CreateRuntime(
-                    "경량 방어구", "이동 범위 +1", 180, EquipmentSlot.Armor, moveBonus: 1));
-                defaultCatalog.Add(TownItemData.CreateRuntime(
-                    "강철 검", "기사 기본 공격 피해량 +1", 150,
-                    EquipmentSlot.Weapon, WeaponKind.Sword, damageBonus: 1));
-                defaultCatalog.Add(TownItemData.CreateRuntime(
-                    "사냥꾼의 활", "궁수 기본 공격 피해량 +1", 150,
-                    EquipmentSlot.Weapon, WeaponKind.Bow, damageBonus: 1));
-                defaultCatalog.Add(TownItemData.CreateRuntime(
-                    "마도 지팡이", "마법사 기본 공격 피해량 +1", 150,
-                    EquipmentSlot.Weapon, WeaponKind.Staff, damageBonus: 1));
-            }
-            return defaultCatalog;
-        }
-
         public static void AddGold(int amount) => gold += UnityEngine.Mathf.Max(0, amount);
+        public static void SetPartyLevel(TacticalPartyLevel level)
+        {
+            partyLevel = level;
+            completedMissionsAtCurrentPartyLevel = 0;
+        }
 
         public static bool TryPurchase(TownItemData item)
         {
@@ -99,12 +91,12 @@ namespace StellaStair.Town
         public static WeaponKind GetRequiredWeaponKind(string unitKey)
         {
             if (string.IsNullOrWhiteSpace(unitKey)) return WeaponKind.None;
-            if (unitKey.IndexOf("Knight", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("기사"))
+            if (unitKey.IndexOf("Knight", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uAE30\uC0AC"))
                 return WeaponKind.Sword;
-            if (unitKey.IndexOf("Archer", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("궁수"))
+            if (unitKey.IndexOf("Archer", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uAD81\uC218"))
                 return WeaponKind.Bow;
             if (unitKey.IndexOf("Wizard", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                unitKey.IndexOf("Mage", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("마법사"))
+                unitKey.IndexOf("Mage", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uB9C8\uBC95\uC0AC"))
                 return WeaponKind.Staff;
             return WeaponKind.None;
         }
@@ -120,12 +112,12 @@ namespace StellaStair.Town
         public static bool IsPartyMemberUnlocked(string unitKey)
         {
             if (string.IsNullOrWhiteSpace(unitKey)) return false;
-            if (unitKey.IndexOf("Knight", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("기사"))
+            if (unitKey.IndexOf("Knight", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uAE30\uC0AC"))
                 return true;
-            if (unitKey.IndexOf("Archer", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("궁수"))
+            if (unitKey.IndexOf("Archer", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uAD81\uC218"))
                 return firstBattleCompleted;
             if (unitKey.IndexOf("Wizard", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                unitKey.IndexOf("Mage", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("마법사"))
+                unitKey.IndexOf("Mage", StringComparison.OrdinalIgnoreCase) >= 0 || unitKey.Contains("\uB9C8\uBC95\uC0AC"))
                 return guildIntroductionCompleted;
             return true;
         }
@@ -144,6 +136,34 @@ namespace StellaStair.Town
         {
             guildIntroductionPlaying = false;
             guildIntroductionCompleted = true;
+        }
+
+
+        public static void RecordStageClear(TacticalMapData stage)
+        {
+            if (stage == null)
+                return;
+
+            if (stage.IsBossMission)
+            {
+                partyLevel = TacticalMissionGradeUtility.GetNextPartyLevel(partyLevel);
+                completedMissionsAtCurrentPartyLevel = 0;
+                return;
+            }
+
+            completedMissionsAtCurrentPartyLevel = UnityEngine.Mathf.Clamp(
+                completedMissionsAtCurrentPartyLevel + 1,
+                0,
+                BossMissionInterval - 1);
+        }
+
+        public static bool IsStageAvailableForCurrentParty(TacticalMapData stage)
+        {
+            if (stage == null)
+                return false;
+            if (!TacticalMissionGradeUtility.IsSameAsPartyLevel(stage.missionGrade, partyLevel))
+                return false;
+            return NextMissionIsBoss ? stage.IsBossMission : !stage.IsBossMission;
         }
 
         public static void SelectStage(string stageName) => selectedStageName = stageName;

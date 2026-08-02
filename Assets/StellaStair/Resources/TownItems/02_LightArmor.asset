@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc5a8d7204cf26429b4c3b5bef54a83, type: 3}
+  m_Name: 02 Light Armor
+  m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Town.TownItemData
+  displayName: "\uACBD\uB7C9 \uBC29\uC5B4\uAD6C"
+  description: "\uC774\uB3D9 \uBC94\uC704 +1"
+  price: 180
+  maxHealthBonus: 0
+  attackDamageBonus: 0
+  movementBonus: 1
+  basicAttackTargetRangeId: 0
+  icon: {fileID: 0}
+  equipmentSlot: 0
+  weaponKind: 0

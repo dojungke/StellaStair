@@ -15,6 +15,7 @@ MonoBehaviour:
   <DisplayName>k__BackingField: Enemy Soldier
   <Description>k__BackingField: "\uD63C\uB3C8\uC758 \uCE74\uC624\uC2A4 \uC8FD\uC74C\uC758
     \uB370\uC2A4"
+  <StartingLevel>k__BackingField: 1
   <MovementPoints>k__BackingField: 5
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 2

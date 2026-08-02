@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using StellaStair.Battle;
 using StellaStair.Units;
@@ -99,6 +99,8 @@ namespace StellaStair.Grid
         public List<UiElement> uiElements = new();
         public List<Round> rounds = new();
         public TacticalStageType stageType = TacticalStageType.Elimination;
+        public TacticalMissionGrade missionGrade = TacticalMissionGrade.Beginner;
+        public bool bossMission;
         [HideInInspector, Min(1)] public int attackObjectiveMaxHealth = 8;
         [HideInInspector, Min(1)] public int defenseObjectiveMaxHealth = 12;
         [HideInInspector] public Sprite attackObjectiveSprite;
@@ -116,6 +118,8 @@ namespace StellaStair.Grid
         private static readonly List<Cell> EmptyCells = new();
 
         public string DisplayName => string.IsNullOrWhiteSpace(mapName) ? name : mapName.Trim();
+        public string MissionGradeDisplayName => TacticalMissionGradeUtility.GetDisplayName(missionGrade);
+        public bool IsBossMission => bossMission;
         public Color BackgroundTint => backgroundTint.a > 0f ? backgroundTint : Color.white;
         public int AttackObjectiveMaxHealth => attackObjectiveMaxHealth > 0 ? attackObjectiveMaxHealth : 8;
         public int DefenseObjectiveMaxHealth => defenseObjectiveMaxHealth > 0 ? defenseObjectiveMaxHealth : 12;

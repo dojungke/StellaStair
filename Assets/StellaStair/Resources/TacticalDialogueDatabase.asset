@@ -38,71 +38,6 @@ MonoBehaviour:
   - stageKey: '*'
     timing: 0
     duration: 2.2
-    order: 38
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 39
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 40
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 41
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
-    order: 42
-    speakerName: 
-    skillKey: 
-    text: 
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 0
-    duration: 2.2
     order: 43
     speakerName: 
     skillKey: 
@@ -205,6 +140,32 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 51
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 0
+    duration: 2.2
+    order: 52
+    speakerName: 
+    skillKey: 
+    text: 
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
     timing: 2
     duration: 2.2
     order: 1
@@ -222,8 +183,74 @@ MonoBehaviour:
     duration: 2.2
     order: 1
     speakerName: Wizard
+    skillKey: BasicAttack
+    text: "\uC0C8\uBE68\uAC1B\uACE0 \uC544\uB984\uB2E4\uC6B4 \uBD88\uAF43\uB180\uC774\uAC00
+      \uB418\uC5B4\uB77C!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Knight
+    skillKey: BasicAttack
+    text: "\uC798\uAC00\uB77C!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Wizard
+    skillKey: Fireball
+    text: "\uB728\uAC70\uC6B8\uAC70\uB2E4! \uC880 \uB9CE\uC774!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Archer
+    skillKey: BasicAttack
+    text: "\uD06C\uB9AC\uD2F0\uCEEC!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Wizard
     skillKey: 
     text: "\uB514\uBC84\uADF8(\uBC8C\uB808\uCEF7)"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 3
+    duration: 2.2
+    order: 1
+    speakerName: Archer
+    skillKey: Harpoon
+    text: "\uC791\uC0B4\uB0C8\uC5B4\uC694!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -248,20 +275,6 @@ MonoBehaviour:
     duration: 2.2
     order: 1
     speakerName: Wizard
-    skillKey: BasicAttack
-    text: "\uC0C8\uBE68\uAC1B\uACE0 \uC544\uB984\uB2E4\uC6B4 \uBD88\uAF43\uB180\uC774\uAC00
-      \uB418\uC5B4\uB77C!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 3
-    duration: 2.2
-    order: 1
-    speakerName: Wizard
     skillKey: IceSpike
     text: "\uC5BC\uC8FD\uC544"
     leftCharacterId: 
@@ -271,51 +284,12 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
-    timing: 3
-    duration: 2.2
+    timing: 4
+    duration: 1
     order: 1
     speakerName: Wizard
-    skillKey: Fireball
-    text: "\uB728\uAC70\uC6B8\uAC70\uB2E4! \uC880 \uB9CE\uC774!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 3
-    duration: 2.2
-    order: 1
-    speakerName: Knight
-    skillKey: BasicAttack
-    text: "\uC798\uAC00\uB77C!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 3
-    duration: 2.2
-    order: 1
-    speakerName: Archer
-    skillKey: BasicAttack
-    text: "\uD06C\uB9AC\uD2F0\uCEEC!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 3
-    duration: 2.2
-    order: 1
-    speakerName: Archer
-    skillKey: Harpoon
-    text: "\uC791\uC0B4\uB0C8\uC5B4\uC694!"
+    skillKey: 
+    text: "\uB530\uB77C\uC62C \uC218 \uC788\uACA0\uB098?"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -349,12 +323,12 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
-    timing: 4
-    duration: 1
+    timing: 5
+    duration: 2.2
     order: 1
     speakerName: Wizard
     skillKey: 
-    text: "\uB530\uB77C\uC62C \uC218 \uC788\uACA0\uB098?"
+    text: "\uB10C \uAC15\uD574\uC84C\uB2E4 \uB3CC\uACA9\uD574!"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -375,12 +349,38 @@ MonoBehaviour:
     rightPortrait: 0
     rightDirection: 0
   - stageKey: '*'
-    timing: 5
-    duration: 2.2
+    timing: 6
+    duration: 1
     order: 1
     speakerName: Wizard
-    skillKey: 
-    text: "\uB10C \uAC15\uD574\uC84C\uB2E4 \uB3CC\uACA9\uD574!"
+    skillKey: NatureFragrance
+    text: "\uAD1C\uCC2E\uC544 \uC790\uC5F0\uC2A4\uB7EC\uC6E0\uC5B4"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 6
+    duration: 1
+    order: 1
+    speakerName: Wizard
+    skillKey: IceSpike
+    text: "\uC5BC\uC74C\uBCBD\uC744 \uC138\uC6B8\uAC8C\uC694!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 6
+    duration: 1
+    order: 1
+    speakerName: Wizard
+    skillKey: Fireball
+    text: "\uBB47\uBCC4\uC744 \uD0DC\uC6B0\uB294 \uC11C\uAD11\uC744 \uB0B4\uB824\uC8FC\uB9C8"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -420,45 +420,6 @@ MonoBehaviour:
     speakerName: Knight
     skillKey: Thrust
     text: "\uCC14\uB9AC\uB294\uB370 \uC788\uB098?"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 6
-    duration: 1
-    order: 1
-    speakerName: Wizard
-    skillKey: Fireball
-    text: "\uBB47\uBCC4\uC744 \uD0DC\uC6B0\uB294 \uC11C\uAD11\uC744 \uB0B4\uB824\uC8FC\uB9C8"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 6
-    duration: 1
-    order: 1
-    speakerName: Wizard
-    skillKey: IceSpike
-    text: "\uC5BC\uC74C\uBCBD\uC744 \uC138\uC6B8\uAC8C\uC694!"
-    leftCharacterId: 
-    leftPortrait: 0
-    leftDirection: 0
-    rightCharacterId: 
-    rightPortrait: 0
-    rightDirection: 0
-  - stageKey: '*'
-    timing: 6
-    duration: 1
-    order: 1
-    speakerName: Wizard
-    skillKey: NatureFragrance
-    text: "\uAD1C\uCC2E\uC544 \uC790\uC5F0\uC2A4\uB7EC\uC6E0\uC5B4"
     leftCharacterId: 
     leftPortrait: 0
     leftDirection: 0
@@ -543,6 +504,45 @@ MonoBehaviour:
     leftDirection: 0
     rightCharacterId: "\uAD81\uC218"
     rightPortrait: 2
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 8
+    duration: 2.2
+    order: 1
+    speakerName: Archer
+    skillKey: 
+    text: "\uB354\uB294 \uD798\uB4E4\uAC83 \uAC19\uC544\uC694..."
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 8
+    duration: 2.2
+    order: 1
+    speakerName: Wizard
+    skillKey: 
+    text: "\uC820\uC7A5 \uD68C\uADC0\uD55C\uB2E4!"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: '*'
+    timing: 8
+    duration: 2.2
+    order: 1
+    speakerName: Knight
+    skillKey: 
+    text: "\uD558\uC544 \uC9C0\uCE58\uB294\uAD70"
+    leftCharacterId: 
+    leftPortrait: 0
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
     rightDirection: 0
   - stageKey: "[\uBCC4] \uD14C\uC2A4\uD2B8 2"
     timing: 0
@@ -676,4 +676,30 @@ MonoBehaviour:
     leftDirection: 0
     rightCharacterId: "\uC774\uB9AC"
     rightPortrait: 1
+    rightDirection: 0
+  - stageKey: "[\uCD08\uAE09] \uC232\uAE38 \uC815\uB9AC"
+    timing: 0
+    duration: 2.2
+    order: 1
+    speakerName: "\uC774\uB9AC"
+    skillKey: 
+    text: "\uD558\uD558 \uC774\uB9AC\uC640\uB77C"
+    leftCharacterId: "\uC774\uB9AC"
+    leftPortrait: 1
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
+    rightDirection: 0
+  - stageKey: "[\uCD08\uAE09] \uC232\uAE38 \uC815\uB9AC"
+    timing: 1
+    duration: 2.2
+    order: 1
+    speakerName: "\uAD81\uC218"
+    skillKey: 
+    text: "\uC26C\uC6B4"
+    leftCharacterId: "\uAD81\uC218"
+    leftPortrait: 1
+    leftDirection: 0
+    rightCharacterId: 
+    rightPortrait: 0
     rightDirection: 0

@@ -17,7 +17,9 @@ namespace StellaStair.Presentation
         private Camera worldCamera;
         private Sprite whiteSprite;
 
-        public void Show(TacticalUnit speaker, string text, float duration = 2.2f)
+        public void Show(
+            TacticalUnit speaker, string text, float duration = 2.2f,
+            bool remainAfterDeath = false)
         {
             if (speaker == null || string.IsNullOrWhiteSpace(text))
                 return;
@@ -27,7 +29,8 @@ namespace StellaStair.Presentation
                 return;
 
             RemoveBubbleFor(speaker);
-            var bubble = CreateBubble(speaker, text.Trim(), Mathf.Max(0.6f, duration));
+            var bubble = CreateBubble(
+                speaker, text.Trim(), Mathf.Max(0.6f, duration), remainAfterDeath);
             activeBubbles.Add(bubble);
             UpdateBubblePosition(bubble);
         }
@@ -37,7 +40,8 @@ namespace StellaStair.Presentation
             for (var i = activeBubbles.Count - 1; i >= 0; i--)
             {
                 var bubble = activeBubbles[i];
-                if (bubble.Speaker == null || !bubble.Speaker.IsAlive)
+                if (!bubble.RemainAfterDeath &&
+                    (bubble.Speaker == null || !bubble.Speaker.IsAlive))
                 {
                     Destroy(bubble.Root.gameObject);
                     activeBubbles.RemoveAt(i);
@@ -58,7 +62,8 @@ namespace StellaStair.Presentation
             }
         }
 
-        private Bubble CreateBubble(TacticalUnit speaker, string text, float duration)
+        private Bubble CreateBubble(
+            TacticalUnit speaker, string text, float duration, bool remainAfterDeath)
         {
             var root = new GameObject($"Speech Bubble - {speaker.name}", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
             root.transform.SetParent(canvasRect, false);
@@ -109,7 +114,9 @@ namespace StellaStair.Presentation
                 Root = rect,
                 Group = root.GetComponent<CanvasGroup>(),
                 Duration = duration,
-                Remaining = duration
+                Remaining = duration,
+                RemainAfterDeath = remainAfterDeath,
+                WorldPosition = speaker.GetPreviewStandingWorldPosition(speaker.Position) + Vector3.up * VerticalOffset
             };
         }
 
@@ -120,7 +127,9 @@ namespace StellaStair.Presentation
             if (canvasRect == null || worldCamera == null)
                 return;
 
-            var world = bubble.Speaker.GetPreviewStandingWorldPosition(bubble.Speaker.Position) + Vector3.up * VerticalOffset;
+            var world = bubble.RemainAfterDeath || bubble.Speaker == null
+                ? bubble.WorldPosition
+                : bubble.Speaker.GetPreviewStandingWorldPosition(bubble.Speaker.Position) + Vector3.up * VerticalOffset;
             var screen = worldCamera.WorldToScreenPoint(world);
             if (screen.z < 0f)
             {
@@ -180,6 +189,8 @@ namespace StellaStair.Presentation
             public CanvasGroup Group;
             public float Duration;
             public float Remaining;
+            public bool RemainAfterDeath;
+            public Vector3 WorldPosition;
         }
     }
 }

@@ -24,6 +24,7 @@ namespace StellaStair.Town
         [SerializeField, Min(0)] private int maxHealthBonus;
         [SerializeField, Min(0)] private int attackDamageBonus;
         [SerializeField, Min(0)] private int movementBonus;
+        [SerializeField, Min(0)] private int basicAttackTargetRangeId;
         [SerializeField] private Sprite icon;
         [SerializeField] private EquipmentSlot equipmentSlot = EquipmentSlot.Armor;
         [SerializeField] private WeaponKind weaponKind = WeaponKind.None;
@@ -34,27 +35,9 @@ namespace StellaStair.Town
         public int MaxHealthBonus => Mathf.Max(0, maxHealthBonus);
         public int AttackDamageBonus => Mathf.Max(0, attackDamageBonus);
         public int MovementBonus => Mathf.Max(0, movementBonus);
+        public int BasicAttackTargetRangeId => Mathf.Max(0, basicAttackTargetRangeId);
         public Sprite Icon => icon;
         public EquipmentSlot EquipmentSlot => equipmentSlot;
         public WeaponKind WeaponKind => weaponKind;
-
-        public static TownItemData CreateRuntime(
-            string itemName, string itemDescription, int itemPrice,
-            EquipmentSlot slot, WeaponKind kind = WeaponKind.None,
-            int healthBonus = 0, int damageBonus = 0, int moveBonus = 0)
-        {
-            var item = CreateInstance<TownItemData>();
-            item.name = itemName;
-            item.displayName = itemName;
-            item.description = itemDescription;
-            item.price = itemPrice;
-            item.maxHealthBonus = healthBonus;
-            item.attackDamageBonus = damageBonus;
-            item.movementBonus = moveBonus;
-            item.equipmentSlot = slot;
-            item.weaponKind = slot == EquipmentSlot.Weapon ? kind : WeaponKind.None;
-            item.hideFlags = HideFlags.HideAndDontSave;
-            return item;
-        }
     }
 }

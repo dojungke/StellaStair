@@ -33,6 +33,7 @@ namespace StellaStair.Presentation
             if (deployment != null)
             {
                 deployment.EnemyKilled += OnEnemyKilled;
+                deployment.BeforeAllyDeath += OnBeforeAllyDeath;
                 deployment.BeforeLevelUp += OnBeforeLevelUp;
                 deployment.UnitHealed += OnUnitHealed;
                 deployment.BeforeAttack += OnBeforeAttack;
@@ -50,6 +51,7 @@ namespace StellaStair.Presentation
                 return;
 
             deployment.EnemyKilled -= OnEnemyKilled;
+            deployment.BeforeAllyDeath -= OnBeforeAllyDeath;
             deployment.BeforeLevelUp -= OnBeforeLevelUp;
             deployment.UnitHealed -= OnUnitHealed;
             deployment.BeforeAttack -= OnBeforeAttack;
@@ -61,6 +63,14 @@ namespace StellaStair.Presentation
             if (killer == null || killer.Team != UnitTeam.Player)
                 return;
             StartCoroutine(SpeakAfterAttackRoutine(killer, skillKey));
+        }
+
+        private IEnumerator OnBeforeAllyDeath(TacticalUnit unit)
+        {
+            if (unit == null || unit.Team != UnitTeam.Player)
+                yield break;
+            yield return PlayDialogueSequence(
+                unit, TacticalDialogueTiming.AllyDied, null, true, true);
         }
 
         private IEnumerator SpeakAfterAttackRoutine(TacticalUnit killer, string skillKey)
@@ -75,7 +85,10 @@ namespace StellaStair.Presentation
             if (attacker == null || attacker.Team != UnitTeam.Player ||
                 string.IsNullOrWhiteSpace(skillKey))
                 yield break;
-            yield return PlayDialogueSequence(attacker, TacticalDialogueTiming.SkillUsed, skillKey, false);
+            var isCoverFire = string.Equals(skillKey, "CoverFire", System.StringComparison.OrdinalIgnoreCase);
+            yield return PlayDialogueSequence(
+                attacker, TacticalDialogueTiming.SkillUsed, skillKey,
+                isCoverFire, isCoverFire);
         }
 
         private IEnumerator OnBeforeLevelUp(TacticalUnit unit)
@@ -96,7 +109,9 @@ namespace StellaStair.Presentation
             StartCoroutine(PlayDialogueSequence(source, TacticalDialogueTiming.AllyHealed, null, false));
         }
 
-        private IEnumerator PlayDialogueSequence(TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey, bool focus)
+        private IEnumerator PlayDialogueSequence(
+            TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey,
+            bool focus, bool forceFocus = false)
         {
             while (dialogueSequenceBusy)
                 yield return null;
@@ -105,7 +120,7 @@ namespace StellaStair.Presentation
             try
             {
                 if (focus)
-                    yield return FocusOnUnitRoutine(speaker);
+                    yield return FocusOnUnitRoutine(speaker, forceFocus);
                 if (Speak(speaker, timing, skillKey))
                     yield return new WaitForSecondsRealtime(lastDialogueDuration);
             }
@@ -115,7 +130,7 @@ namespace StellaStair.Presentation
             }
         }
 
-        private IEnumerator FocusOnUnitRoutine(TacticalUnit unit)
+        private IEnumerator FocusOnUnitRoutine(TacticalUnit unit, bool forceFocus = false)
         {
             if (unit == null)
                 yield break;
@@ -125,14 +140,19 @@ namespace StellaStair.Presentation
             var pan = camera.GetComponent<TacticalCameraPan>();
             if (pan == null)
                 pan = camera.gameObject.AddComponent<TacticalCameraPan>();
-            yield return pan.FocusOn(unit, focusDuration);
+            if (forceFocus)
+                yield return pan.FocusOnPosition(
+                    unit.GetPreviewStandingWorldPosition(unit.Position), focusDuration, true);
+            else
+                yield return pan.FocusOn(unit, focusDuration);
         }
 
         private bool Speak(TacticalUnit speaker, TacticalDialogueTiming timing, string skillKey = null)
         {
-            if (speaker == null || !speaker.IsAlive)
+            if (speaker == null || (!speaker.IsAlive && timing != TacticalDialogueTiming.AllyDied))
                 return false;
-            if (lastSpeaker == speaker && Time.time - lastSpeakTime < sameSpeakerCooldown)
+            if (timing != TacticalDialogueTiming.AllyDied &&
+                lastSpeaker == speaker && Time.time - lastSpeakTime < sameSpeakerCooldown)
                 return false;
 
             EnsureDependencies();
@@ -147,7 +167,9 @@ namespace StellaStair.Presentation
             if (string.IsNullOrWhiteSpace(text))
                 return false;
 
-            speechBubblePresenter?.Show(speaker, text, lastDialogueDuration);
+            speechBubblePresenter?.Show(
+                speaker, text, lastDialogueDuration,
+                timing == TacticalDialogueTiming.AllyDied);
             lastSpeaker = speaker;
             lastSpeakTime = Time.time;
             return true;
@@ -198,6 +220,7 @@ namespace StellaStair.Presentation
                 TacticalDialogueTiming.LevelUp => "\uB354 \uAC15\uD574\uC84C\uC5B4.",
                 TacticalDialogueTiming.AllyHealed => "\uC774\uC81C \uAD1C\uCC2E\uC744 \uAC70\uC57C.",
                 TacticalDialogueTiming.SkillUsed => string.Empty,
+                TacticalDialogueTiming.AllyDied => string.Empty,
                 _ => string.Empty
             };
         }

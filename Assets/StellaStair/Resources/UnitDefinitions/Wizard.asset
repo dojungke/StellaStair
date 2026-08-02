@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Wizard
   m_EditorClassIdentifier: StellaStair.Runtime::StellaStair.Units.UnitDefinition
   <DisplayName>k__BackingField: Wizard
+  <Description>k__BackingField: 
+  <StartingLevel>k__BackingField: 1
   <MovementPoints>k__BackingField: 4
   <MoveSpeed>k__BackingField: 5
   <MaxHealth>k__BackingField: 2

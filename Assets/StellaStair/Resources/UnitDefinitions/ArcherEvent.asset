@@ -30,69 +30,7 @@ MonoBehaviour:
   <AreaKnockbackDistance>k__BackingField: 0
   attackTargetOffsets: []
   attackEffectOffsets: []
-  attackModeRanges:
-  - attackMode: BowStrike
-    targetOffsets:
-    - x: -1
-      y: 1
-    - x: 0
-      y: 1
-    - x: 1
-      y: 1
-    - x: -1
-      y: 0
-    - x: 1
-      y: 0
-    - x: -1
-      y: -1
-    - x: 0
-      y: -1
-    - x: 1
-      y: -1
-    effectOffsets:
-    - x: 0
-      y: 0
-  - attackMode: Harpoon
-    targetOffsets:
-    - x: -4
-      y: 1
-    - x: -3
-      y: 1
-    - x: -2
-      y: 1
-    - x: 2
-      y: 1
-    - x: 3
-      y: 1
-    - x: 4
-      y: 1
-    - x: -4
-      y: 0
-    - x: -3
-      y: 0
-    - x: -2
-      y: 0
-    - x: 2
-      y: 0
-    - x: 3
-      y: 0
-    - x: 4
-      y: 0
-    - x: -4
-      y: -1
-    - x: -3
-      y: -1
-    - x: -2
-      y: -1
-    - x: 2
-      y: -1
-    - x: 3
-      y: -1
-    - x: 4
-      y: -1
-    effectOffsets:
-    - x: 0
-      y: 0
+  attackModeRanges: []
   <UnitSprite>k__BackingField: {fileID: -1495826415125420833, guid: fbe66098ad5d9e946b4d343eb32a38a7, type: 3}
   <AnimationPrefab>k__BackingField: {fileID: 0}
   <AnimationController>k__BackingField: {fileID: 0}

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Presentation;
@@ -277,7 +277,7 @@ namespace StellaStair.Battle
                 foreach (var stage in registeredStages)
                     if (IsHerbGatheringStage(stage))
                         return stage;
-                Debug.LogWarning("The fixed first stage '[연습] 약초 채집' is not registered. Falling back to the first stage.", this);
+                Debug.LogWarning("The fixed first stage '[?곗뒿] ?쎌큹 梨꾩쭛' is not registered. Falling back to the first stage.", this);
                 foreach (var stage in registeredStages)
                     if (stage != null) return stage;
             }
@@ -287,28 +287,45 @@ namespace StellaStair.Battle
                 foreach (var stage in registeredStages)
                     if (stage != null && string.Equals(stage.name, requestedStageName, System.StringComparison.OrdinalIgnoreCase))
                         return stage;
+            var available = GetStageCandidatesForCurrentParty(true);
+            if (available.Count == 0)
+                available = GetStageCandidatesForCurrentParty(false);
+            return available.Count > 0 ? available[Random.Range(0, available.Count)] : null;
+        }
+
+        private List<TacticalMapData> GetStageCandidatesForCurrentParty(bool requireMissionAvailability)
+        {
             var available = new List<TacticalMapData>();
             foreach (var stage in registeredStages)
             {
                 if (stage == null)
+                    continue;
+                if (requireMissionAvailability && !TownProgressState.IsStageAvailableForCurrentParty(stage))
                     continue;
                 if (avoidImmediateRepeat && registeredStages.Count > 1 &&
                     stage.name == lastStageName)
                     continue;
                 available.Add(stage);
             }
-            if (available.Count == 0)
+            if (available.Count == 0 && avoidImmediateRepeat)
+            {
                 foreach (var stage in registeredStages)
-                    if (stage != null)
-                        available.Add(stage);
-            return available.Count > 0 ? available[Random.Range(0, available.Count)] : null;
+                {
+                    if (stage == null)
+                        continue;
+                    if (requireMissionAvailability && !TownProgressState.IsStageAvailableForCurrentParty(stage))
+                        continue;
+                    available.Add(stage);
+                }
+            }
+            return available;
         }
 
         private static bool IsHerbGatheringStage(TacticalMapData stage)
         {
             if (stage == null) return false;
             return string.Equals(stage.name, "3213", System.StringComparison.OrdinalIgnoreCase) ||
-                   (!string.IsNullOrWhiteSpace(stage.DisplayName) && stage.DisplayName.Contains("약초 채집"));
+                   (!string.IsNullOrWhiteSpace(stage.DisplayName) && stage.DisplayName.Contains("?쎌큹 梨꾩쭛"));
         }
 
         private void OnPhaseChanged(BattlePhase phase)
@@ -759,6 +776,8 @@ namespace StellaStair.Battle
             yield return PlayStageDialogueRoutine(TacticalDialogueTiming.AfterVictory);
             if (!TownProgressState.FirstBattleCompleted && IsHerbGatheringStage(CurrentStage))
                 TownProgressState.CompleteFirstBattle();
+            else if (!IsHerbGatheringStage(CurrentStage))
+                TownProgressState.RecordStageClear(CurrentStage);
             if (autoAdvanceOnVictory)
                 ShowTown();
         }
@@ -770,9 +789,25 @@ namespace StellaStair.Battle
             TownProgressState.AddGold(100);
             townHub ??= GetComponent<TownHubPresenter>();
             townHub ??= gameObject.AddComponent<TownHubPresenter>();
-            townHub.Show(registeredStages, battle != null ? battle.PlayerUnits : null, SelectStageFromTown, OnGuildOpened);
+            var guildStages = BuildGuildStages(true);
+            if (guildStages.Count == 0)
+                guildStages = BuildGuildStages(false);
+            townHub.Show(guildStages, battle != null ? battle.PlayerUnits : null, SelectStageFromTown, OnGuildOpened);
         }
 
+        private List<TacticalMapData> BuildGuildStages(bool requireMissionAvailability)
+        {
+            var guildStages = new List<TacticalMapData>();
+            foreach (var stage in registeredStages)
+            {
+                if (stage == null || IsHerbGatheringStage(stage))
+                    continue;
+                if (requireMissionAvailability && !TownProgressState.IsStageAvailableForCurrentParty(stage))
+                    continue;
+                guildStages.Add(stage);
+            }
+            return guildStages;
+        }
         private void SelectStageFromTown(TacticalMapData stage)
         {
             if (stage == null) return;
