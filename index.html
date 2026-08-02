@@ -64,7 +64,6 @@
         productName: "StellaStair",
         productVersion: "1.0",
         showBanner: unityShowBanner,
-        matchWebGLToCanvasSize: false,
         // errorHandler: function(err, url, line) {
         //    alert("error " + err + " occurred at line " + line);
         //    // Return 'true' if you handled this error and don't want Unity
@@ -102,6 +101,7 @@
 
       } else {
         // Keep the reference render size stable and scale the whole game on small desktop windows.
+        config.matchWebGLToCanvasSize = false;
         canvas.style.width = "100%";
         canvas.style.height = "auto";
       }
