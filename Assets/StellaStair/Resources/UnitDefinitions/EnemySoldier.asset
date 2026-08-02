@@ -57,7 +57,7 @@ MonoBehaviour:
   - x: 0
     y: 0
   attackModeRanges: []
-  <UnitSprite>k__BackingField: {fileID: -5565481537080689747, guid: 171c9e0e8de2dc249aec64b9e90c4163, type: 3}
+  <UnitSprite>k__BackingField: {fileID: -8688392260014441854, guid: c7df7df291dbaaa45b34ed83339ba262, type: 3}
   <AnimationPrefab>k__BackingField: {fileID: 0}
   <AnimationController>k__BackingField: {fileID: 0}
   <AnimationLocalOffset>k__BackingField: {x: 0, y: 0, z: 0}
