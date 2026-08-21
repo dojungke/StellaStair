@@ -109,8 +109,9 @@ MonoBehaviour:
   enemyUnitLayers: []
   objectiveLayers: []
   defenseObjectiveLayers: []
-  mapName: "[초급] 보급로 확보"
-  mapDescription: "상자를 엄폐물로 활용해 경비병과 원거리 병사를 처치하세요."
+  mapName: "\uBCF4\uAE09\uB85C \uD655\uBCF4"
+  mapDescription: "\uC0C1\uC790\uB97C \uC5C4\uD3D0\uBB3C\uB85C \uD65C\uC6A9\uD574
+    \uACBD\uBE44\uBCD1\uACFC \uC6D0\uAC70\uB9AC \uBCD1\uC0AC\uB97C \uCC98\uCE58\uD558\uC138\uC694."
   objectiveName: 
   objectiveDescription: 
   backgroundSprite: {fileID: 21300000, guid: 8d70f7c15ef54c34b2959d45518d11f7, type: 3}
@@ -118,6 +119,8 @@ MonoBehaviour:
   uiElements: []
   rounds: []
   stageType: 0
+  missionGrade: 0
+  bossMission: 0
   attackObjectiveMaxHealth: 8
   defenseObjectiveMaxHealth: 12
   attackObjectiveSprite: {fileID: 0}

@@ -151,7 +151,7 @@ MonoBehaviour:
       tile: {fileID: 11400000, guid: 581ff09539e4475da76bc0621135807d, type: 2}
       color: {r: 1, g: 0.82, b: 0.12, a: 1}
   defenseObjectiveLayers: []
-  mapName: "[\uC774\uB9AC] \uD14C\uC2A4\uD2B8"
+  mapName: "\uD14C\uC2A4\uD2B8"
   mapDescription: "\uB9C8\uC744 \uADFC\uCC98 \uC232\uC5D0 \uB098\uD0C0\uB09C \uB9F7\uB3FC\uC9C0\uB97C
     \uCC98\uCE58\uD574\uC8FC\uC138\uC694.\n\n\uBCF4\uC218: 200\uACE8\uB4DC\n-\uB9C8\uC744
     \uACBD\uBE44\uB300"
@@ -162,12 +162,17 @@ MonoBehaviour:
   uiElements: []
   rounds: []
   stageType: 1
+  missionGrade: 0
+  bossMission: 0
   attackObjectiveMaxHealth: 4
   defenseObjectiveMaxHealth: 12
   attackObjectiveSprite: {fileID: -607931776538409338, guid: 9acf0e06f2542e54aa8681a465eccaf4, type: 3}
   defenseObjectiveSprite: {fileID: 0}
   attackObjective: {fileID: 0}
   defenseObjective: {fileID: 0}
+  woodObject: {fileID: 0}
+  crateObject: {fileID: 0}
+  bombCrateObject: {fileID: 0}
   defenseTurnsToSurvive: 5
   escortTurnsToSurvive: 5
   escortUnitProgressKey: 

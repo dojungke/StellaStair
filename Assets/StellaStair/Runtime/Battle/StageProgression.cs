@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using StellaStair.Grid;
 using StellaStair.Presentation;
@@ -43,6 +43,7 @@ namespace StellaStair.Battle
         private bool beforeBattleDialoguePlayed;
         private bool defeatDialogueStarted;
         private TownHubPresenter townHub;
+        private FirstStageTutorialPresenter firstStageTutorial;
 
         public TacticalMapData CurrentStage { get; private set; }
         public IReadOnlyList<TacticalMapData> RegisteredStages => registeredStages;
@@ -78,6 +79,11 @@ namespace StellaStair.Battle
                     CurrentStage != null ? CurrentStage.defenseTurnsToSurvive : 5,
                     CurrentStage != null ? CurrentStage.escortTurnsToSurvive : 5,
                     CurrentStage != null ? CurrentStage.escortUnitProgressKey : string.Empty);
+                if (!TownProgressState.FirstBattleCompleted)
+                {
+                    firstStageTutorial = EnsureFirstStageTutorial(battle);
+                    firstStageTutorial.Configure(battle);
+                }
             }
             if (battle != null)
             {
@@ -91,6 +97,21 @@ namespace StellaStair.Battle
             }
         }
 
+        private void ShowFirstStageTutorialIfNeeded()
+        {
+            if (TownProgressState.FirstBattleCompleted)
+                return;
+            if (firstStageTutorial == null && battle != null)
+                firstStageTutorial = EnsureFirstStageTutorial(battle);
+            firstStageTutorial?.ShowTutorial();
+        }
+        private static FirstStageTutorialPresenter EnsureFirstStageTutorial(DeploymentManager targetBattle)
+        {
+            var presenter = targetBattle.GetComponent<FirstStageTutorialPresenter>();
+            if (presenter == null)
+                presenter = targetBattle.gameObject.AddComponent<FirstStageTutorialPresenter>();
+            return presenter;
+        }
         private void ApplyStagePresentation()
         {
             if (CurrentStage == null)
@@ -218,6 +239,7 @@ namespace StellaStair.Battle
             startingBattleFromDialogue = true;
             beforeBattleDialoguePlayed = true;
             yield return PlayStageDialogueRoutine(TacticalDialogueTiming.BeforeBattle);
+            ShowFirstStageTutorialIfNeeded();
             startingBattleFromDialogue = false;
             if (stageCanvas != null)
                 stageCanvas.SetActive(false);
@@ -340,6 +362,7 @@ namespace StellaStair.Battle
         {
             beforeBattleDialoguePlayed = true;
             yield return PlayStageDialogueRoutine(TacticalDialogueTiming.BeforeBattle);
+            ShowFirstStageTutorialIfNeeded();
             if (battle == null || battle.Phase != BattlePhase.Deployment)
                 yield break;
 

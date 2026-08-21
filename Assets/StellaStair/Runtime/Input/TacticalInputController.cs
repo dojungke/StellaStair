@@ -937,6 +937,12 @@ namespace StellaStair.Input
             if (selected == null || selected.Team != UnitTeam.Player ||
                 selected.IsMoving || selected.HasAttacked)
                 return;
+            if (pendingMoveDestination.HasValue &&
+                pendingMoveDestination.Value == destination)
+            {
+                ConfirmPendingMove();
+                return;
+            }
             if (!GridPathfinder.TryFindPath(
                     deployment.Board, selected.Position, destination,
                     selected.RemainingMovement, selected, out var path))
@@ -1048,6 +1054,13 @@ namespace StellaStair.Input
         {
             if (selected == null || !attackablePositions.Contains(targetPosition))
                 return;
+            if (pendingAttackTarget.HasValue &&
+                pendingAttackTarget.Value == targetPosition &&
+                !pendingAttackTargetsWood)
+            {
+                ToggleAttackMode();
+                return;
+            }
 
             ClearAttackPreview();
             pendingAttackTarget = targetPosition;
@@ -1065,6 +1078,13 @@ namespace StellaStair.Input
             if (selected == null || !attackablePositions.Contains(targetPosition) ||
                 !deployment.Board.IsWoodTile(targetPosition))
                 return;
+            if (pendingAttackTarget.HasValue &&
+                pendingAttackTarget.Value == targetPosition &&
+                pendingAttackTargetsWood)
+            {
+                ToggleAttackMode();
+                return;
+            }
 
             ClearAttackPreview();
             pendingAttackTarget = targetPosition;

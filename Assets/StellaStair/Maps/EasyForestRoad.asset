@@ -97,7 +97,7 @@ MonoBehaviour:
   enemyUnitLayers: []
   objectiveLayers: []
   defenseObjectiveLayers: []
-  mapName: "[\uCD08\uAE09] \uC232\uAE38 \uC815\uB9AC"
+  mapName: "\uC232\uAE38 \uC815\uB9AC"
   mapDescription: "\uC232\uAE38\uC744 \uB9C9\uACE0 \uC788\uB294 \uC774\uB9AC\uB4E4\uC744
     \uCC98\uCE58\uD558\uC138\uC694."
   objectiveName: 
@@ -107,6 +107,8 @@ MonoBehaviour:
   uiElements: []
   rounds: []
   stageType: 0
+  missionGrade: 0
+  bossMission: 0
   attackObjectiveMaxHealth: 8
   defenseObjectiveMaxHealth: 12
   attackObjectiveSprite: {fileID: 0}

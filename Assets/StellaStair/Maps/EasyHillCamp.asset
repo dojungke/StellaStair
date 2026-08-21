@@ -148,8 +148,9 @@ MonoBehaviour:
   enemyUnitLayers: []
   objectiveLayers: []
   defenseObjectiveLayers: []
-  mapName: "[초급] 언덕 야영지"
-  mapDescription: "사다리와 폭탄 상자를 이용해 언덕의 적 야영지를 정리하세요."
+  mapName: "\uC5B8\uB355 \uC57C\uC601\uC9C0"
+  mapDescription: "\uC0AC\uB2E4\uB9AC\uC640 \uD3ED\uD0C4 \uC0C1\uC790\uB97C \uC774\uC6A9\uD574
+    \uC5B8\uB355\uC758 \uC801 \uC57C\uC601\uC9C0\uB97C \uC815\uB9AC\uD558\uC138\uC694."
   objectiveName: 
   objectiveDescription: 
   backgroundSprite: {fileID: 21300000, guid: 8d70f7c15ef54c34b2959d45518d11f7, type: 3}
@@ -157,6 +158,8 @@ MonoBehaviour:
   uiElements: []
   rounds: []
   stageType: 0
+  missionGrade: 0
+  bossMission: 0
   attackObjectiveMaxHealth: 8
   defenseObjectiveMaxHealth: 12
   attackObjectiveSprite: {fileID: 0}

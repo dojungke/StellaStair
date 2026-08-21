@@ -149,7 +149,7 @@ MonoBehaviour:
       tile: {fileID: 11400000, guid: 581ff09539e4475da76bc0621135807d, type: 2}
       color: {r: 1, g: 0.82, b: 0.12, a: 1}
   defenseObjectiveLayers: []
-  mapName: "[\uC5F0\uC2B5] \uC57D\uCD08 \uCC44\uC9D1"
+  mapName: "\uC57D\uCD08 \uCC44\uC9D1"
   mapDescription: "\uC57D\uCD08\uB97C 2\uAC1C \uCCB4\uC9D1\uD574 \uAC00\uC838\uC624\uC2DC\uC624.\n\n\uBCF4\uC218:
     \uCD08\uBCF4 \uBAA8\uD5D8\uAC00 \uC790\uACA9\uC99D \uBC1C\uAE09\n-\uBAA8\uD5D8\uAC00
     \uAE38\uB4DC"
@@ -160,6 +160,8 @@ MonoBehaviour:
   uiElements: []
   rounds: []
   stageType: 1
+  missionGrade: 0
+  bossMission: 0
   attackObjectiveMaxHealth: 1
   defenseObjectiveMaxHealth: 12
   attackObjectiveSprite: {fileID: -355798565296084813, guid: 363ae99165992d448a089d81ecb1c014, type: 3}
